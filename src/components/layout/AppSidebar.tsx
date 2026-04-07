@@ -9,12 +9,13 @@ import {
   Megaphone,
   Receipt,
   Activity,
-  Stethoscope,
   Apple,
   Brain,
   Settings,
   ChevronDown,
   LogOut,
+  Briefcase,
+  Contact,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -37,12 +38,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Stethoscope } from "lucide-react";
 
 const mainNav = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Pipeline", url: "/pipeline", icon: TrendingUp },
+  { title: "Contactos", url: "/contactos", icon: Contact },
   { title: "Leads", url: "/leads", icon: UserPlus },
-  { title: "Pacientes", url: "/pacientes", icon: Users },
+  { title: "Clientes", url: "/clientes", icon: Users },
+  { title: "Negocios", url: "/negocios", icon: Briefcase },
   { title: "Agenda", url: "/agenda", icon: CalendarDays },
   { title: "Centros", url: "/centros", icon: Building2 },
 ];

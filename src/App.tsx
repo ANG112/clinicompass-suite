@@ -6,10 +6,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
-import PipelinePage from "./pages/PipelinePage";
-import LeadsPage from "./pages/LeadsPage";
-import PatientsPage from "./pages/PatientsPage";
-import PatientDetailPage from "./pages/PatientDetailPage";
+import ContactsPage from "./pages/ContactsPage";
+import ContactDetailPage from "./pages/ContactDetailPage";
+import BusinessesPage from "./pages/BusinessesPage";
 import AgendaPage from "./pages/AgendaPage";
 import CentersPage from "./pages/CentersPage";
 import PhysioPage from "./pages/PhysioPage";
@@ -59,10 +58,11 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
             <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-            <Route path="/pipeline" element={<ProtectedRoute><PipelinePage /></ProtectedRoute>} />
-            <Route path="/leads" element={<ProtectedRoute><LeadsPage /></ProtectedRoute>} />
-            <Route path="/pacientes" element={<ProtectedRoute><PatientsPage /></ProtectedRoute>} />
-            <Route path="/pacientes/:id" element={<ProtectedRoute><PatientDetailPage /></ProtectedRoute>} />
+            <Route path="/contactos" element={<ProtectedRoute><ContactsPage /></ProtectedRoute>} />
+            <Route path="/contactos/:id" element={<ProtectedRoute><ContactDetailPage /></ProtectedRoute>} />
+            <Route path="/leads" element={<ProtectedRoute><ContactsPage filterCategory="lead" /></ProtectedRoute>} />
+            <Route path="/clientes" element={<ProtectedRoute><ContactsPage filterCategory="cliente" /></ProtectedRoute>} />
+            <Route path="/negocios" element={<ProtectedRoute><BusinessesPage /></ProtectedRoute>} />
             <Route path="/agenda" element={<ProtectedRoute><AgendaPage /></ProtectedRoute>} />
             <Route path="/centros" element={<ProtectedRoute><CentersPage /></ProtectedRoute>} />
             <Route path="/fisioterapia" element={<ProtectedRoute><PhysioPage /></ProtectedRoute>} />
@@ -72,6 +72,10 @@ const App = () => (
             <Route path="/facturacion" element={<ProtectedRoute><BillingPage /></ProtectedRoute>} />
             <Route path="/documentos" element={<ProtectedRoute><DocumentsPage /></ProtectedRoute>} />
             <Route path="/configuracion" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+            {/* Legacy routes redirect */}
+            <Route path="/pipeline" element={<Navigate to="/negocios" replace />} />
+            <Route path="/pacientes" element={<Navigate to="/clientes" replace />} />
+            <Route path="/pacientes/:id" element={<Navigate to="/contactos/:id" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
