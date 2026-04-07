@@ -727,6 +727,231 @@ export type Database = {
           },
         ]
       }
+      invoice_items: {
+        Row: {
+          appointment_id: string | null
+          created_at: string
+          description: string
+          id: string
+          invoice_id: string
+          position: number
+          quantity: number
+          service_id: string | null
+          subtotal: number
+          tax_amount: number
+          tax_rate: number
+          total: number
+          unit_price: number
+        }
+        Insert: {
+          appointment_id?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          invoice_id: string
+          position?: number
+          quantity?: number
+          service_id?: string | null
+          subtotal?: number
+          tax_amount?: number
+          tax_rate?: number
+          total?: number
+          unit_price?: number
+        }
+        Update: {
+          appointment_id?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          invoice_id?: string
+          position?: number
+          quantity?: number
+          service_id?: string | null
+          subtotal?: number
+          tax_amount?: number
+          tax_rate?: number
+          total?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_items_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_items_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_series: {
+        Row: {
+          active: boolean
+          center_id: string
+          created_at: string
+          current_number: number
+          doc_type: string
+          id: string
+          prefix: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          center_id: string
+          created_at?: string
+          current_number?: number
+          doc_type?: string
+          id?: string
+          prefix: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          center_id?: string
+          created_at?: string
+          current_number?: number
+          doc_type?: string
+          id?: string
+          prefix?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_series_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          business_id: string | null
+          center_id: string
+          contact_id: string
+          created_at: string
+          due_date: string | null
+          fiscal_address: string | null
+          fiscal_email: string | null
+          fiscal_name: string | null
+          fiscal_nif: string | null
+          fiscal_phone: string | null
+          id: string
+          invoice_number: string | null
+          invoice_type: Database["public"]["Enums"]["invoice_type"]
+          issue_date: string
+          notes: string | null
+          paid_amount: number
+          quote_id: string | null
+          series_id: string | null
+          status: Database["public"]["Enums"]["invoice_status"]
+          subtotal: number
+          tax_amount: number
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          business_id?: string | null
+          center_id: string
+          contact_id: string
+          created_at?: string
+          due_date?: string | null
+          fiscal_address?: string | null
+          fiscal_email?: string | null
+          fiscal_name?: string | null
+          fiscal_nif?: string | null
+          fiscal_phone?: string | null
+          id?: string
+          invoice_number?: string | null
+          invoice_type?: Database["public"]["Enums"]["invoice_type"]
+          issue_date?: string
+          notes?: string | null
+          paid_amount?: number
+          quote_id?: string | null
+          series_id?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subtotal?: number
+          tax_amount?: number
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string | null
+          center_id?: string
+          contact_id?: string
+          created_at?: string
+          due_date?: string | null
+          fiscal_address?: string | null
+          fiscal_email?: string | null
+          fiscal_name?: string | null
+          fiscal_nif?: string | null
+          fiscal_phone?: string | null
+          id?: string
+          invoice_number?: string | null
+          invoice_type?: Database["public"]["Enums"]["invoice_type"]
+          issue_date?: string
+          notes?: string | null
+          paid_amount?: number
+          quote_id?: string | null
+          series_id?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subtotal?: number
+          tax_amount?: number
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           assigned_to: string | null
@@ -937,6 +1162,78 @@ export type Database = {
           },
         ]
       }
+      payment_methods: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          position: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          invoice_id: string
+          notes: string | null
+          payment_date: string
+          payment_method_id: string | null
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          invoice_id: string
+          notes?: string | null
+          payment_date?: string
+          payment_method_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          invoice_id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_method_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pipeline_stages: {
         Row: {
           business_line: Database["public"]["Enums"]["business_line"]
@@ -960,6 +1257,154 @@ export type Database = {
           position?: number
         }
         Relationships: []
+      }
+      quote_items: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          position: number
+          quantity: number
+          quote_id: string
+          service_id: string | null
+          subtotal: number
+          tax_amount: number
+          tax_rate: number
+          total: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          position?: number
+          quantity?: number
+          quote_id: string
+          service_id?: string | null
+          subtotal?: number
+          tax_amount?: number
+          tax_rate?: number
+          total?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          position?: number
+          quantity?: number
+          quote_id?: string
+          service_id?: string | null
+          subtotal?: number
+          tax_amount?: number
+          tax_rate?: number
+          total?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_items_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotes: {
+        Row: {
+          business_id: string | null
+          center_id: string
+          contact_id: string
+          created_at: string
+          fiscal_address: string | null
+          fiscal_email: string | null
+          fiscal_name: string | null
+          fiscal_nif: string | null
+          fiscal_phone: string | null
+          id: string
+          issue_date: string
+          notes: string | null
+          quote_number: string | null
+          status: Database["public"]["Enums"]["quote_status"]
+          subtotal: number
+          tax_amount: number
+          total: number
+          updated_at: string
+          valid_until: string | null
+        }
+        Insert: {
+          business_id?: string | null
+          center_id: string
+          contact_id: string
+          created_at?: string
+          fiscal_address?: string | null
+          fiscal_email?: string | null
+          fiscal_name?: string | null
+          fiscal_nif?: string | null
+          fiscal_phone?: string | null
+          id?: string
+          issue_date?: string
+          notes?: string | null
+          quote_number?: string | null
+          status?: Database["public"]["Enums"]["quote_status"]
+          subtotal?: number
+          tax_amount?: number
+          total?: number
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Update: {
+          business_id?: string | null
+          center_id?: string
+          contact_id?: string
+          created_at?: string
+          fiscal_address?: string | null
+          fiscal_email?: string | null
+          fiscal_name?: string | null
+          fiscal_nif?: string | null
+          fiscal_phone?: string | null
+          id?: string
+          issue_date?: string
+          notes?: string | null
+          quote_number?: string | null
+          status?: Database["public"]["Enums"]["quote_status"]
+          subtotal?: number
+          tax_amount?: number
+          total?: number
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       services: {
         Row: {
@@ -1176,6 +1621,13 @@ export type Database = {
         | "whatsapp"
         | "nota"
         | "accion_comercial"
+      invoice_status:
+        | "borrador"
+        | "emitida"
+        | "parcialmente_cobrada"
+        | "cobrada"
+        | "anulada"
+      invoice_type: "factura" | "simplificada"
       lead_status:
         | "nuevo"
         | "contactado"
@@ -1185,6 +1637,7 @@ export type Database = {
         | "perdido"
       pack_status: "activo" | "completado" | "vencido" | "cancelado"
       patient_status: "activo" | "inactivo" | "alta_pendiente" | "baja"
+      quote_status: "borrador" | "entregado" | "aceptado" | "rechazado"
       slot_status: "disponible" | "ocupado" | "bloqueado"
     }
     CompositeTypes: {
@@ -1339,6 +1792,14 @@ export const Constants = {
         "nota",
         "accion_comercial",
       ],
+      invoice_status: [
+        "borrador",
+        "emitida",
+        "parcialmente_cobrada",
+        "cobrada",
+        "anulada",
+      ],
+      invoice_type: ["factura", "simplificada"],
       lead_status: [
         "nuevo",
         "contactado",
@@ -1349,6 +1810,7 @@ export const Constants = {
       ],
       pack_status: ["activo", "completado", "vencido", "cancelado"],
       patient_status: ["activo", "inactivo", "alta_pendiente", "baja"],
+      quote_status: ["borrador", "entregado", "aceptado", "rechazado"],
       slot_status: ["disponible", "ocupado", "bloqueado"],
     },
   },
