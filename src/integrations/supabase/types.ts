@@ -105,6 +105,86 @@ export type Database = {
           },
         ]
       }
+      availability_slots: {
+        Row: {
+          appointment_id: string | null
+          center_id: string
+          created_at: string
+          date: string
+          duration_minutes: number
+          end_time: string
+          id: string
+          is_recurring: boolean
+          notes: string | null
+          professional_id: string
+          service_id: string | null
+          start_time: string
+          status: Database["public"]["Enums"]["slot_status"]
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          center_id: string
+          created_at?: string
+          date: string
+          duration_minutes?: number
+          end_time: string
+          id?: string
+          is_recurring?: boolean
+          notes?: string | null
+          professional_id: string
+          service_id?: string | null
+          start_time: string
+          status?: Database["public"]["Enums"]["slot_status"]
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          center_id?: string
+          created_at?: string
+          date?: string
+          duration_minutes?: number
+          end_time?: string
+          id?: string
+          is_recurring?: boolean
+          notes?: string | null
+          professional_id?: string
+          service_id?: string | null
+          start_time?: string
+          status?: Database["public"]["Enums"]["slot_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_slots_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_slots_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_slots_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "staff_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_slots_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_pipeline_stages: {
         Row: {
           business_type_id: string
@@ -1105,6 +1185,7 @@ export type Database = {
         | "perdido"
       pack_status: "activo" | "completado" | "vencido" | "cancelado"
       patient_status: "activo" | "inactivo" | "alta_pendiente" | "baja"
+      slot_status: "disponible" | "ocupado" | "bloqueado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1268,6 +1349,7 @@ export const Constants = {
       ],
       pack_status: ["activo", "completado", "vencido", "cancelado"],
       patient_status: ["activo", "inactivo", "alta_pendiente", "baja"],
+      slot_status: ["disponible", "ocupado", "bloqueado"],
     },
   },
 } as const
