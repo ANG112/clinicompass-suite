@@ -17,12 +17,12 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { Plus, Search, Receipt, CreditCard, CheckCircle, AlertCircle, Trash2, Banknote } from "lucide-react";
 
-const statusCfg: Record<string, { label: string; variant: "default" | "success" | "warning" | "error" }> = {
-  borrador: { label: "Borrador", variant: "default" },
+const statusCfg: Record<string, { label: string; variant: "muted" | "success" | "warning" | "destructive" }> = {
+  borrador: { label: "Borrador", variant: "muted" },
   emitida: { label: "Emitida", variant: "warning" },
   parcialmente_cobrada: { label: "Parcial", variant: "warning" },
   cobrada: { label: "Cobrada", variant: "success" },
-  anulada: { label: "Anulada", variant: "error" },
+  anulada: { label: "Anulada", variant: "destructive" },
 };
 
 interface LineItem { description: string; quantity: number; unit_price: number; tax_rate: number; }

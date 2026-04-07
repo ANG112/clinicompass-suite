@@ -16,11 +16,11 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { Plus, Search, FileText, ArrowRight, Trash2 } from "lucide-react";
 
-const statusCfg: Record<string, { label: string; variant: "default" | "success" | "warning" | "error" }> = {
-  borrador: { label: "Borrador", variant: "default" },
+const statusCfg: Record<string, { label: string; variant: "muted" | "success" | "warning" | "destructive" }> = {
+  borrador: { label: "Borrador", variant: "muted" },
   entregado: { label: "Entregado", variant: "warning" },
   aceptado: { label: "Aceptado", variant: "success" },
-  rechazado: { label: "Rechazado", variant: "error" },
+  rechazado: { label: "Rechazado", variant: "destructive" },
 };
 
 interface LineItem {
