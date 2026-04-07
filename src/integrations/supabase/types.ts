@@ -17,6 +17,7 @@ export type Database = {
       appointments: {
         Row: {
           center_id: string
+          contact_id: string | null
           created_at: string
           end_time: string
           id: string
@@ -31,6 +32,7 @@ export type Database = {
         }
         Insert: {
           center_id: string
+          contact_id?: string | null
           created_at?: string
           end_time: string
           id?: string
@@ -45,6 +47,7 @@ export type Database = {
         }
         Update: {
           center_id?: string
+          contact_id?: string | null
           created_at?: string
           end_time?: string
           id?: string
@@ -63,6 +66,13 @@ export type Database = {
             columns: ["center_id"]
             isOneToOne: false
             referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
           {
@@ -91,6 +101,213 @@ export type Database = {
             columns: ["treatment_pack_id"]
             isOneToOne: false
             referencedRelation: "treatment_packs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_pipeline_stages: {
+        Row: {
+          business_type_id: string
+          created_at: string
+          id: string
+          name: string
+          position: number
+        }
+        Insert: {
+          business_type_id: string
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+        }
+        Update: {
+          business_type_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_pipeline_stages_business_type_id_fkey"
+            columns: ["business_type_id"]
+            isOneToOne: false
+            referencedRelation: "business_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_stage_history: {
+        Row: {
+          business_id: string
+          changed_by: string | null
+          created_at: string
+          from_stage_id: string | null
+          id: string
+          notes: string | null
+          to_stage_id: string
+        }
+        Insert: {
+          business_id: string
+          changed_by?: string | null
+          created_at?: string
+          from_stage_id?: string | null
+          id?: string
+          notes?: string | null
+          to_stage_id: string
+        }
+        Update: {
+          business_id?: string
+          changed_by?: string | null
+          created_at?: string
+          from_stage_id?: string | null
+          id?: string
+          notes?: string | null
+          to_stage_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_stage_history_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_stage_history_from_stage_id_fkey"
+            columns: ["from_stage_id"]
+            isOneToOne: false
+            referencedRelation: "business_pipeline_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_stage_history_to_stage_id_fkey"
+            columns: ["to_stage_id"]
+            isOneToOne: false
+            referencedRelation: "business_pipeline_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_types: {
+        Row: {
+          active: boolean
+          business_line: string
+          created_at: string
+          default_price: number
+          id: string
+          name: string
+          position: number
+        }
+        Insert: {
+          active?: boolean
+          business_line: string
+          created_at?: string
+          default_price?: number
+          id?: string
+          name: string
+          position?: number
+        }
+        Update: {
+          active?: boolean
+          business_line?: string
+          created_at?: string
+          default_price?: number
+          id?: string
+          name?: string
+          position?: number
+        }
+        Relationships: []
+      }
+      businesses: {
+        Row: {
+          assigned_to: string | null
+          business_type_id: string
+          center_id: string | null
+          closed_at: string | null
+          contact_id: string
+          created_at: string
+          estimated_amount: number
+          expected_close_date: string | null
+          id: string
+          name: string
+          next_action: string | null
+          next_action_date: string | null
+          notes: string | null
+          stage_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          business_type_id: string
+          center_id?: string | null
+          closed_at?: string | null
+          contact_id: string
+          created_at?: string
+          estimated_amount?: number
+          expected_close_date?: string | null
+          id?: string
+          name: string
+          next_action?: string | null
+          next_action_date?: string | null
+          notes?: string | null
+          stage_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          business_type_id?: string
+          center_id?: string | null
+          closed_at?: string | null
+          contact_id?: string
+          created_at?: string
+          estimated_amount?: number
+          expected_close_date?: string | null
+          id?: string
+          name?: string
+          next_action?: string | null
+          next_action_date?: string | null
+          notes?: string | null
+          stage_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "businesses_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "staff_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "businesses_business_type_id_fkey"
+            columns: ["business_type_id"]
+            isOneToOne: false
+            referencedRelation: "business_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "businesses_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "businesses_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "businesses_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "business_pipeline_stages"
             referencedColumns: ["id"]
           },
         ]
@@ -137,6 +354,139 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_categories: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          name: string
+          position: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          name: string
+          position?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          name?: string
+          position?: number
+        }
+        Relationships: []
+      }
+      contacts: {
+        Row: {
+          address: string | null
+          assigned_professional_id: string | null
+          birth_date: string | null
+          category_id: string
+          center_id: string | null
+          city: string | null
+          company_name: string | null
+          created_at: string
+          deleted_at: string | null
+          email: string | null
+          first_name: string
+          fiscal_address: string | null
+          fiscal_email: string | null
+          fiscal_name: string | null
+          fiscal_nif: string | null
+          fiscal_phone: string | null
+          id: string
+          last_name: string | null
+          nif: string | null
+          notes: string | null
+          phone: string | null
+          postal_code: string | null
+          sex: string | null
+          source: string | null
+          tags: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          assigned_professional_id?: string | null
+          birth_date?: string | null
+          category_id: string
+          center_id?: string | null
+          city?: string | null
+          company_name?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          email?: string | null
+          first_name: string
+          fiscal_address?: string | null
+          fiscal_email?: string | null
+          fiscal_name?: string | null
+          fiscal_nif?: string | null
+          fiscal_phone?: string | null
+          id?: string
+          last_name?: string | null
+          nif?: string | null
+          notes?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          sex?: string | null
+          source?: string | null
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          assigned_professional_id?: string | null
+          birth_date?: string | null
+          category_id?: string
+          center_id?: string | null
+          city?: string | null
+          company_name?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          email?: string | null
+          first_name?: string
+          fiscal_address?: string | null
+          fiscal_email?: string | null
+          fiscal_name?: string | null
+          fiscal_nif?: string | null
+          fiscal_phone?: string | null
+          id?: string
+          last_name?: string | null
+          nif?: string | null
+          notes?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          sex?: string | null
+          source?: string | null
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_assigned_professional_id_fkey"
+            columns: ["assigned_professional_id"]
+            isOneToOne: false
+            referencedRelation: "staff_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "contact_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_types: {
         Row: {
           category: string
@@ -161,6 +511,7 @@ export type Database = {
       documents: {
         Row: {
           center_id: string | null
+          contact_id: string | null
           created_at: string
           document_type_id: string | null
           file_name: string | null
@@ -174,6 +525,7 @@ export type Database = {
         }
         Insert: {
           center_id?: string | null
+          contact_id?: string | null
           created_at?: string
           document_type_id?: string | null
           file_name?: string | null
@@ -187,6 +539,7 @@ export type Database = {
         }
         Update: {
           center_id?: string | null
+          contact_id?: string | null
           created_at?: string
           document_type_id?: string | null
           file_name?: string | null
@@ -207,6 +560,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "documents_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "documents_document_type_id_fkey"
             columns: ["document_type_id"]
             isOneToOne: false
@@ -224,6 +584,8 @@ export type Database = {
       }
       interactions: {
         Row: {
+          business_id: string | null
+          contact_id: string | null
           created_at: string
           created_by: string | null
           id: string
@@ -233,6 +595,8 @@ export type Database = {
           type: Database["public"]["Enums"]["interaction_type"]
         }
         Insert: {
+          business_id?: string | null
+          contact_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -242,6 +606,8 @@ export type Database = {
           type: Database["public"]["Enums"]["interaction_type"]
         }
         Update: {
+          business_id?: string | null
+          contact_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -251,6 +617,20 @@ export type Database = {
           type?: Database["public"]["Enums"]["interaction_type"]
         }
         Relationships: [
+          {
+            foreignKeyName: "interactions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interactions_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "interactions_lead_id_fkey"
             columns: ["lead_id"]
@@ -586,6 +966,7 @@ export type Database = {
       }
       treatment_packs: {
         Row: {
+          contact_id: string | null
           created_at: string
           expiry_date: string | null
           id: string
@@ -600,6 +981,7 @@ export type Database = {
           used_sessions: number
         }
         Insert: {
+          contact_id?: string | null
           created_at?: string
           expiry_date?: string | null
           id?: string
@@ -614,6 +996,7 @@ export type Database = {
           used_sessions?: number
         }
         Update: {
+          contact_id?: string | null
           created_at?: string
           expiry_date?: string | null
           id?: string
@@ -628,6 +1011,13 @@ export type Database = {
           used_sessions?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "treatment_packs_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "treatment_packs_patient_id_fkey"
             columns: ["patient_id"]
