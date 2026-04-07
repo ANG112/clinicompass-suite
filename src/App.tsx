@@ -16,6 +16,8 @@ import NutritionPage from "./pages/NutritionPage";
 import PsychotechPage from "./pages/PsychotechPage";
 import CampaignsPage from "./pages/CampaignsPage";
 import BillingPage from "./pages/BillingPage";
+import QuotesPage from "./pages/QuotesPage";
+import InvoicesPage from "./pages/InvoicesPage";
 import DocumentsPage from "./pages/DocumentsPage";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
@@ -69,7 +71,10 @@ const App = () => (
             <Route path="/nutricion" element={<ProtectedRoute><NutritionPage /></ProtectedRoute>} />
             <Route path="/psicotecnicos" element={<ProtectedRoute><PsychotechPage /></ProtectedRoute>} />
             <Route path="/campanas" element={<ProtectedRoute><CampaignsPage /></ProtectedRoute>} />
-            <Route path="/facturacion" element={<ProtectedRoute><BillingPage /></ProtectedRoute>} />
+            <Route path="/facturacion" element={<ProtectedRoute><InvoicesPage /></ProtectedRoute>} />
+            <Route path="/presupuestos" element={<ProtectedRoute><QuotesPage /></ProtectedRoute>} />
+            <Route path="/facturas" element={<ProtectedRoute><InvoicesPage invoiceType="factura" /></ProtectedRoute>} />
+            <Route path="/facturas-simplificadas" element={<ProtectedRoute><InvoicesPage invoiceType="simplificada" /></ProtectedRoute>} />
             <Route path="/documentos" element={<ProtectedRoute><DocumentsPage /></ProtectedRoute>} />
             <Route path="/configuracion" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             {/* Legacy routes redirect */}

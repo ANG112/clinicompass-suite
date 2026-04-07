@@ -58,6 +58,7 @@ const clinicalNav = [
 
 const managementNav = [
   { title: "Campañas", url: "/campanas", icon: Megaphone },
+  { title: "Presupuestos", url: "/presupuestos", icon: FileText },
   { title: "Facturación", url: "/facturacion", icon: Receipt },
   { title: "Documentos", url: "/documentos", icon: FileText },
   { title: "Configuración", url: "/configuracion", icon: Settings },
