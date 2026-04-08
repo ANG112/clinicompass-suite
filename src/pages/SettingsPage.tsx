@@ -188,6 +188,35 @@ export default function SettingsPage() {
     }
   };
 
+  const openEditRoles = (staff: any) => {
+    setEditingStaff(staff);
+    setEditRoles(staff.roles || []);
+  };
+
+  const handleSaveRoles = async () => {
+    if (!editingStaff) return;
+    setSavingRoles(true);
+    try {
+      // Delete existing roles
+      const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", editingStaff.user_id);
+      if (delErr) throw delErr;
+      // Insert new roles
+      if (editRoles.length > 0) {
+        const { error: insErr } = await supabase.from("user_roles").insert(
+          editRoles.map(role => ({ user_id: editingStaff.user_id, role }))
+        );
+        if (insErr) throw insErr;
+      }
+      toast.success("Roles actualizados");
+      queryClient.invalidateQueries({ queryKey: ["staff-with-roles"] });
+      setEditingStaff(null);
+    } catch (e: any) {
+      toast.error(e.message || "Error al actualizar roles");
+    } finally {
+      setSavingRoles(false);
+    }
+  };
+
   const isGerencia = hasRole("gerencia");
 
   return (
