@@ -567,7 +567,14 @@ export default function AgendaPage() {
                             }
                             if (slot.status === "bloqueado") {
                               return (
-                                <div key={slot.id} className={`rounded-md border p-1.5 ${slotStatusColors.bloqueado}`}>
+                                <div key={slot.id} className={`rounded-md border p-1.5 relative group ${slotStatusColors.bloqueado}`}>
+                                  <button
+                                    className="absolute top-0.5 right-0.5 hidden group-hover:flex h-4 w-4 items-center justify-center rounded bg-destructive/80 text-white"
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteSlot(slot.id); }}
+                                    title="Eliminar hueco"
+                                  >
+                                    <X className="h-2.5 w-2.5" />
+                                  </button>
                                   <span className="text-[10px] text-muted-foreground">Bloqueado</span>
                                 </div>
                               );
