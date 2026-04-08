@@ -236,22 +236,93 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="services">
-          <div className="stat-card max-w-2xl">
-            <h3 className="text-sm font-semibold font-heading text-foreground mb-4">Servicios y líneas de negocio</h3>
-            <div className="space-y-2">
-              {[
-                { name: "Fisioterapia", color: "bg-primary/10 text-primary" },
-                { name: "Nutrición", color: "bg-accent/10 text-accent" },
-                { name: "Psicotécnicos", color: "bg-warning/10 text-warning" },
-              ].map((s) => (
-                <div key={s.name} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${s.color}`}>{s.name}</span>
-                  <Button variant="ghost" size="sm" className="text-xs">Editar</Button>
-                </div>
-              ))}
-              <Button variant="outline" size="sm" className="mt-2">+ Añadir servicio</Button>
+          <div className="stat-card max-w-4xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold font-heading text-foreground">Servicios disponibles</h3>
+              {isGerencia && (
+                <Button size="sm" onClick={() => { resetSvcForm(); setEditingService(null); setOpenService(true); }}>
+                  <Plus className="h-4 w-4 mr-1" />Nuevo servicio
+                </Button>
+              )}
             </div>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="font-semibold">Nombre</TableHead>
+                  <TableHead className="font-semibold">Especialidad</TableHead>
+                  <TableHead className="font-semibold">Duración</TableHead>
+                  <TableHead className="font-semibold text-right">Precio</TableHead>
+                  <TableHead className="font-semibold text-center">Activo</TableHead>
+                  <TableHead className="font-semibold">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {servicesLoading ? (
+                  <TableRow><TableCell colSpan={6} className="text-center py-4 text-muted-foreground">Cargando...</TableCell></TableRow>
+                ) : !allServices?.length ? (
+                  <TableRow><TableCell colSpan={6} className="text-center py-4 text-muted-foreground">Sin servicios configurados</TableCell></TableRow>
+                ) : allServices.map((svc: any) => (
+                  <TableRow key={svc.id} className={!svc.active ? "opacity-50" : ""}>
+                    <TableCell className="text-sm font-medium">{svc.name}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-[10px]">
+                        {svc.business_line === "fisioterapia" ? "Fisioterapia" : svc.business_line === "nutricion" ? "Nutrición" : "Psicotécnicos"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm">{svc.duration_minutes} min</TableCell>
+                    <TableCell className="text-sm text-right font-mono">{svc.price > 0 ? `€${svc.price}` : "—"}</TableCell>
+                    <TableCell className="text-center">
+                      <Switch checked={svc.active} onCheckedChange={() => toggleServiceActive(svc)} />
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => openEditService(svc)}>
+                        <Pencil className="h-3 w-3" /> Editar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
+
+          <Dialog open={openService} onOpenChange={setOpenService}>
+            <DialogContent className="max-w-md">
+              <DialogHeader><DialogTitle>{editingService ? "Editar servicio" : "Nuevo servicio"}</DialogTitle></DialogHeader>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Nombre *</Label>
+                  <Input className="h-9" value={svcForm.name} onChange={e => setSvcForm({ ...svcForm, name: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Especialidad</Label>
+                  <Select value={svcForm.business_line} onValueChange={v => setSvcForm({ ...svcForm, business_line: v })}>
+                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fisioterapia">Fisioterapia</SelectItem>
+                      <SelectItem value="nutricion">Nutrición</SelectItem>
+                      <SelectItem value="psicotecnicos">Psicotécnicos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Duración (min)</Label>
+                    <Input type="number" className="h-9" value={svcForm.duration_minutes} onChange={e => setSvcForm({ ...svcForm, duration_minutes: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Precio base (€)</Label>
+                    <Input type="number" step="0.01" className="h-9" value={svcForm.price} onChange={e => setSvcForm({ ...svcForm, price: e.target.value })} />
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-2">
+                <Button variant="outline" onClick={() => setOpenService(false)}>Cancelar</Button>
+                <Button onClick={handleSaveService} disabled={createService.isPending || updateService.isPending}>
+                  {editingService ? "Guardar cambios" : "Crear servicio"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         <TabsContent value="billing">
