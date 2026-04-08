@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -21,20 +22,26 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Verify calling user has gerencia role
-    const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user: caller } } = await anonClient.auth.getUser();
-    if (!caller) {
-      return new Response(JSON.stringify({ error: "No autorizado" }), {
-        status: 401,
+    if (!supabaseUrl || !serviceRoleKey) {
+      return new Response(JSON.stringify({ error: "Server config error" }), {
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
+    // Verify caller identity using the JWT from the Authorization header
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user: caller }, error: authError } = await adminClient.auth.getUser(token);
+    if (authError || !caller) {
+      return new Response(JSON.stringify({ error: "No autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Check caller has gerencia role
     const { data: callerRoles } = await adminClient
       .from("user_roles")
       .select("role")
