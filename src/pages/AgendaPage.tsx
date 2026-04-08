@@ -571,10 +571,16 @@ export default function AgendaPage() {
                 </Select>
               </div>
               <div className="space-y-1.5 col-span-2">
-                <Label className="text-xs">Servicio (opcional)</Label>
-                <Select value={slotForm.service_id} onValueChange={v => setSlotForm({ ...slotForm, service_id: v, slot_duration: services?.find((s: any) => s.id === v)?.duration_minutes?.toString() || slotForm.slot_duration })}>
+                <Label className="text-xs">Servicio (especialidad)</Label>
+                <Select value={slotForm.service_id || "none"} onValueChange={v => {
+                  const val = v === "none" ? "" : v;
+                  setSlotForm({ ...slotForm, service_id: val, slot_duration: val ? (services?.find((s: any) => s.id === val)?.duration_minutes?.toString() || slotForm.slot_duration) : slotForm.slot_duration });
+                }}>
                   <SelectTrigger className="h-9"><SelectValue placeholder="Cualquier servicio" /></SelectTrigger>
-                  <SelectContent>{services?.map(s => <SelectItem key={s.id} value={s.id}>{s.name} ({s.duration_minutes}min)</SelectItem>)}</SelectContent>
+                  <SelectContent>
+                    <SelectItem value="none">Sin servicio específico</SelectItem>
+                    {(services || []).map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name} — {s.business_line === "fisioterapia" ? "Fisio" : s.business_line === "nutricion" ? "Nutri" : "Psico"} ({s.duration_minutes}min)</SelectItem>)}
+                  </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
