@@ -19,6 +19,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 
 const stageVariants: Record<number, "info" | "primary" | "warning" | "success" | "muted"> = {
   0: "info", 1: "primary", 2: "warning", 3: "primary", 4: "success", 5: "muted",
@@ -34,7 +35,6 @@ export default function BusinessesPage() {
   const { selectedCenterId } = useCenterFilter();
   const { profile } = useAuth();
 
-  // Auto-select first business type
   const selectedTypeId = activeTypeId || businessTypes?.[0]?.id || "";
   const { data: stages } = useBusinessPipelineStages(selectedTypeId);
   const { data: businesses, isLoading } = useBusinesses({
@@ -50,7 +50,6 @@ export default function BusinessesPage() {
   const createStageChange = useCreateStageChange();
 
   const selectedBusiness = businesses?.find((b: any) => b.id === detailId);
-
   const preselectedContactId = searchParams.get("contact") || "";
 
   const [form, setForm] = useState({
@@ -91,7 +90,14 @@ export default function BusinessesPage() {
     } catch (err: any) { toast.error(err.message); }
   };
 
-  // Group businesses by stage
+  const onDragEnd = async (result: DropResult) => {
+    const { draggableId, destination, source } = result;
+    if (!destination || destination.droppableId === source.droppableId) return;
+    const biz = businesses?.find((b: any) => b.id === draggableId);
+    if (!biz) return;
+    await moveToStage(draggableId, destination.droppableId, biz.stage_id);
+  };
+
   const businessesByStage = (stages || []).reduce((acc: Record<string, any[]>, stage: any) => {
     acc[stage.id] = (businesses || []).filter((b: any) => b.stage_id === stage.id);
     return acc;
@@ -105,7 +111,6 @@ export default function BusinessesPage() {
         </Button>
       </PageHeader>
 
-      {/* Business type tabs */}
       <div className="mb-5">
         <Tabs value={selectedTypeId} onValueChange={setActiveTypeId}>
           <TabsList className="flex-wrap h-auto gap-1">
@@ -118,61 +123,77 @@ export default function BusinessesPage() {
         </Tabs>
       </div>
 
-      {/* Kanban */}
       {isLoading ? (
         <div className="flex justify-center p-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {stages?.map((stage: any) => {
-            const stageBusinesses = businessesByStage[stage.id] || [];
-            const variant = stageVariants[stage.position] || "muted";
-            return (
-              <div key={stage.id} className="kanban-column flex-shrink-0">
-                <div className="flex items-center justify-between mb-3 px-1">
-                  <div className="flex items-center gap-2">
-                    <StatusBadge variant={variant} dot>{stage.name}</StatusBadge>
-                    <span className="text-xs text-muted-foreground font-medium">{stageBusinesses.length}</span>
-                  </div>
-                </div>
-                <div className="space-y-2 min-h-[100px]">
-                  {stageBusinesses.map((biz: any) => (
+        <DragDropContext onDragEnd={onDragEnd}>
+          <div className="flex gap-4 overflow-x-auto pb-4">
+            {stages?.map((stage: any) => {
+              const stageBusinesses = businessesByStage[stage.id] || [];
+              const variant = stageVariants[stage.position] || "muted";
+              return (
+                <Droppable key={stage.id} droppableId={stage.id}>
+                  {(provided, snapshot) => (
                     <div
-                      key={biz.id}
-                      className="kanban-card group cursor-pointer"
-                      onClick={() => setDetailId(biz.id)}
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`kanban-column flex-shrink-0 transition-colors ${snapshot.isDraggingOver ? "bg-primary/5 ring-2 ring-primary/20 rounded-xl" : ""}`}
                     >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{biz.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          <User className="inline h-3 w-3 mr-1" />
-                          {biz.contact?.first_name} {biz.contact?.last_name}
-                        </p>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-xs text-muted-foreground">{biz.center?.name || "Sin centro"}</span>
-                          <span className="text-xs font-semibold text-foreground">
-                            {biz.estimated_amount > 0 ? `€${biz.estimated_amount}` : "Gratis"}
-                          </span>
+                      <div className="flex items-center justify-between mb-3 px-1">
+                        <div className="flex items-center gap-2">
+                          <StatusBadge variant={variant} dot>{stage.name}</StatusBadge>
+                          <span className="text-xs text-muted-foreground font-medium">{stageBusinesses.length}</span>
                         </div>
-                        {biz.next_action && (
-                          <div className="mt-2 text-[10px] text-warning flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {biz.next_action}
-                            {biz.next_action_date && <span className="text-muted-foreground"> · {format(new Date(biz.next_action_date), "dd/MM")}</span>}
-                          </div>
-                        )}
-                        {biz.assigned?.first_name && (
-                          <p className="text-[10px] text-muted-foreground mt-1">
-                            Resp: {biz.assigned.first_name} {biz.assigned.last_name}
-                          </p>
-                        )}
+                      </div>
+                      <div className="space-y-2 min-h-[100px]">
+                        {stageBusinesses.map((biz: any, index: number) => (
+                          <Draggable key={biz.id} draggableId={biz.id} index={index}>
+                            {(dragProvided, dragSnapshot) => (
+                              <div
+                                ref={dragProvided.innerRef}
+                                {...dragProvided.draggableProps}
+                                {...dragProvided.dragHandleProps}
+                                className={`kanban-card group cursor-grab ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-primary/30 rotate-1" : ""}`}
+                                onClick={() => { if (!dragSnapshot.isDragging) setDetailId(biz.id); }}
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-foreground truncate">{biz.name}</p>
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    <User className="inline h-3 w-3 mr-1" />
+                                    {biz.contact?.first_name} {biz.contact?.last_name}
+                                  </p>
+                                  <div className="flex items-center justify-between mt-2">
+                                    <span className="text-xs text-muted-foreground">{biz.center?.name || "Sin centro"}</span>
+                                    <span className="text-xs font-semibold text-foreground">
+                                      {biz.estimated_amount > 0 ? `€${biz.estimated_amount}` : "Gratis"}
+                                    </span>
+                                  </div>
+                                  {biz.next_action && (
+                                    <div className="mt-2 text-[10px] text-warning flex items-center gap-1">
+                                      <Calendar className="h-3 w-3" />
+                                      {biz.next_action}
+                                      {biz.next_action_date && <span className="text-muted-foreground"> · {format(new Date(biz.next_action_date), "dd/MM")}</span>}
+                                    </div>
+                                  )}
+                                  {biz.assigned?.first_name && (
+                                    <p className="text-[10px] text-muted-foreground mt-1">
+                                      Resp: {biz.assigned.first_name} {biz.assigned.last_name}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                  )}
+                </Droppable>
+              );
+            })}
+          </div>
+        </DragDropContext>
       )}
 
       {/* Business detail dialog */}
@@ -197,7 +218,6 @@ export default function BusinessesPage() {
                 <div><span className="text-xs text-muted-foreground">Responsable</span><p>{(selectedBusiness as any).assigned ? `${(selectedBusiness as any).assigned.first_name} ${(selectedBusiness as any).assigned.last_name}` : "-"}</p></div>
               </div>
 
-              {/* Move between stages */}
               <div>
                 <p className="text-xs font-semibold text-foreground mb-2">Mover a etapa</p>
                 <div className="flex flex-wrap gap-1.5">
@@ -215,38 +235,22 @@ export default function BusinessesPage() {
                 </div>
               </div>
 
-              {/* Next action */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs">Próxima acción</Label>
-                  <Input
-                    className="h-8 text-xs"
-                    defaultValue={selectedBusiness.next_action || ""}
-                    onBlur={(e) => updateBusiness.mutateAsync({ id: selectedBusiness.id, next_action: e.target.value || null })}
-                  />
+                  <Input className="h-8 text-xs" defaultValue={selectedBusiness.next_action || ""} onBlur={(e) => updateBusiness.mutateAsync({ id: selectedBusiness.id, next_action: e.target.value || null })} />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Fecha próxima acción</Label>
-                  <Input
-                    type="date"
-                    className="h-8 text-xs"
-                    defaultValue={selectedBusiness.next_action_date ? String(selectedBusiness.next_action_date).split("T")[0] : ""}
-                    onChange={(e) => updateBusiness.mutateAsync({ id: selectedBusiness.id, next_action_date: e.target.value || null })}
-                  />
+                  <Input type="date" className="h-8 text-xs" defaultValue={selectedBusiness.next_action_date ? String(selectedBusiness.next_action_date).split("T")[0] : ""} onChange={(e) => updateBusiness.mutateAsync({ id: selectedBusiness.id, next_action_date: e.target.value || null })} />
                 </div>
               </div>
 
-              {/* Notes */}
               <div className="space-y-1">
                 <Label className="text-xs">Notas</Label>
-                <Textarea
-                  className="text-xs min-h-[60px]"
-                  defaultValue={selectedBusiness.notes || ""}
-                  onBlur={(e) => updateBusiness.mutateAsync({ id: selectedBusiness.id, notes: e.target.value || null })}
-                />
+                <Textarea className="text-xs min-h-[60px]" defaultValue={selectedBusiness.notes || ""} onBlur={(e) => updateBusiness.mutateAsync({ id: selectedBusiness.id, notes: e.target.value || null })} />
               </div>
 
-              {/* Status actions */}
               <div className="flex gap-2">
                 {selectedBusiness.status === "abierto" && (
                   <>

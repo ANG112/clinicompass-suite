@@ -128,7 +128,7 @@ export function AppSidebar() {
 
       <SidebarContent className="px-2">
         <NavGroup label="Principal" items={mainNav} />
-        <NavGroup label="Clínica" items={clinicalNav} />
+        <NavGroup label="Servicios disponibles" items={clinicalNav} />
         <NavGroup label="Gestión" items={managementNav} />
       </SidebarContent>
 
