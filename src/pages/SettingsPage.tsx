@@ -32,6 +32,16 @@ const ROLE_LABELS: Record<string, string> = {
   psicotecnico: "Psicotécnico",
 };
 
+const ROLE_DESCRIPTIONS: Record<string, string> = {
+  gerencia: "Acceso total al sistema: gestión de equipo, configuración, creación de usuarios, eliminación de datos y todas las operaciones.",
+  administracion: "Gestión de centros, series de facturación, servicios, contactos, negocios, agenda y facturación.",
+  recepcion: "Gestión de citas, disponibilidad, contactos y operaciones de recepción del centro.",
+  comercial: "Gestión de leads, negocios, presupuestos, facturas y seguimiento comercial.",
+  fisioterapeuta: "Acceso a agenda propia, citas, contactos asignados y disponibilidad de fisioterapia.",
+  nutricionista: "Acceso a agenda propia, citas, contactos asignados y disponibilidad de nutrición.",
+  psicotecnico: "Acceso a agenda propia, citas, contactos asignados y disponibilidad de psicotécnicos.",
+};
+
 export default function SettingsPage() {
   const { data: series, isLoading: seriesLoading } = useInvoiceSeries();
   const { data: centers } = useCenters();
