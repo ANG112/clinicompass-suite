@@ -8,17 +8,61 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Settings, Users, Tag, Shield, Receipt, Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Settings, Users, Tag, Shield, Receipt, Plus, Loader2 } from "lucide-react";
 import { useInvoiceSeries, useCreateInvoiceSeries } from "@/hooks/useBilling";
 import { useCenters } from "@/hooks/useCenters";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Constants } from "@/integrations/supabase/types";
+
+const ALL_ROLES = Constants.public.Enums.app_role;
+const ROLE_LABELS: Record<string, string> = {
+  gerencia: "Gerencia",
+  administracion: "Administración",
+  recepcion: "Recepción",
+  comercial: "Comercial",
+  fisioterapeuta: "Fisioterapeuta",
+  nutricionista: "Nutricionista",
+  psicotecnico: "Psicotécnico",
+};
 
 export default function SettingsPage() {
   const { data: series, isLoading: seriesLoading } = useInvoiceSeries();
   const { data: centers } = useCenters();
+  const { hasRole } = useAuth();
+  const queryClient = useQueryClient();
   const createSeries = useCreateInvoiceSeries();
   const [openSeries, setOpenSeries] = useState(false);
   const [seriesForm, setSeriesForm] = useState({ center_id: "", prefix: "", doc_type: "factura" });
+
+  // Team state
+  const [openUser, setOpenUser] = useState(false);
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [userForm, setUserForm] = useState({
+    email: "", password: "", first_name: "", last_name: "",
+    center_id: "", specialty: "", roles: [] as string[],
+  });
+
+  // Fetch staff profiles with roles
+  const { data: staffList, isLoading: staffLoading } = useQuery({
+    queryKey: ["staff-with-roles"],
+    queryFn: async () => {
+      const [profilesRes, rolesRes] = await Promise.all([
+        supabase.from("staff_profiles").select("*, center:centers(name)").eq("active", true).order("first_name"),
+        supabase.from("user_roles").select("*"),
+      ]);
+      const profiles = profilesRes.data || [];
+      const roles = rolesRes.data || [];
+      return profiles.map((p: any) => ({
+        ...p,
+        roles: roles.filter((r: any) => r.user_id === p.user_id).map((r: any) => r.role),
+      }));
+    },
+  });
 
   const handleCreateSeries = async () => {
     if (!seriesForm.center_id || !seriesForm.prefix) { toast.error("Completa centro y prefijo"); return; }
@@ -29,6 +73,53 @@ export default function SettingsPage() {
       setSeriesForm({ center_id: "", prefix: "", doc_type: "factura" });
     } catch (e: any) { toast.error(e.message); }
   };
+
+  const toggleRole = (role: string) => {
+    setUserForm(prev => ({
+      ...prev,
+      roles: prev.roles.includes(role)
+        ? prev.roles.filter(r => r !== role)
+        : [...prev.roles, role],
+    }));
+  };
+
+  const handleCreateUser = async () => {
+    if (!userForm.email || !userForm.password || !userForm.first_name || !userForm.last_name) {
+      toast.error("Completa todos los campos obligatorios");
+      return;
+    }
+    if (userForm.roles.length === 0) {
+      toast.error("Selecciona al menos un rol");
+      return;
+    }
+    setCreatingUser(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await supabase.functions.invoke("create-user", {
+        body: {
+          email: userForm.email,
+          password: userForm.password,
+          first_name: userForm.first_name,
+          last_name: userForm.last_name,
+          roles: userForm.roles,
+          center_id: userForm.center_id || null,
+          specialty: userForm.specialty || null,
+        },
+      });
+      if (res.error) throw new Error(res.error.message || "Error creando usuario");
+      if (res.data?.error) throw new Error(res.data.error);
+      toast.success(`Usuario ${userForm.email} creado correctamente`);
+      setOpenUser(false);
+      setUserForm({ email: "", password: "", first_name: "", last_name: "", center_id: "", specialty: "", roles: [] });
+      queryClient.invalidateQueries({ queryKey: ["staff-with-roles"] });
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
+  const isGerencia = hasRole("gerencia");
 
   return (
     <AppLayout>
@@ -76,13 +167,12 @@ export default function SettingsPage() {
           <div className="stat-card max-w-2xl">
             <h3 className="text-sm font-semibold font-heading text-foreground mb-4">Roles del sistema</h3>
             <div className="space-y-2">
-              {["Gerencia", "Administración", "Recepción", "Comercial", "Fisioterapeuta", "Nutricionista", "Personal psicotécnicos"].map((role) => (
+              {ALL_ROLES.map((role) => (
                 <div key={role} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
                   <div className="flex items-center gap-3">
                     <Shield className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium">{role}</span>
+                    <span className="text-sm font-medium">{ROLE_LABELS[role] || role}</span>
                   </div>
-                  <Button variant="ghost" size="sm" className="text-xs">Configurar permisos</Button>
                 </div>
               ))}
             </div>
@@ -175,10 +265,121 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="team">
-          <div className="stat-card max-w-2xl">
-            <h3 className="text-sm font-semibold font-heading text-foreground mb-4">Equipo</h3>
-            <p className="text-sm text-muted-foreground">La gestión de usuarios y profesionales estará disponible próximamente con la integración completa de autenticación.</p>
+          <div className="stat-card max-w-4xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold font-heading text-foreground">Equipo del CRM</h3>
+              {isGerencia && (
+                <Button size="sm" onClick={() => setOpenUser(true)}>
+                  <Plus className="h-4 w-4 mr-1" />Nuevo usuario
+                </Button>
+              )}
+            </div>
+
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="font-semibold">Nombre</TableHead>
+                  <TableHead className="font-semibold">Email</TableHead>
+                  <TableHead className="font-semibold">Centro</TableHead>
+                  <TableHead className="font-semibold">Roles</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {staffLoading ? (
+                  <TableRow><TableCell colSpan={4} className="text-center py-4 text-muted-foreground">Cargando...</TableCell></TableRow>
+                ) : !staffList?.length ? (
+                  <TableRow><TableCell colSpan={4} className="text-center py-4 text-muted-foreground">Sin usuarios</TableCell></TableRow>
+                ) : staffList.map((s: any) => (
+                  <TableRow key={s.id}>
+                    <TableCell className="text-sm font-medium">{s.first_name} {s.last_name}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{s.email || "-"}</TableCell>
+                    <TableCell className="text-sm">{s.center?.name || "-"}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {s.roles?.map((r: string) => (
+                          <Badge key={r} variant="secondary" className="text-[10px]">
+                            {ROLE_LABELS[r] || r}
+                          </Badge>
+                        ))}
+                        {(!s.roles || s.roles.length === 0) && (
+                          <span className="text-xs text-muted-foreground">Sin roles</span>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
+
+          <Dialog open={openUser} onOpenChange={setOpenUser}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader><DialogTitle>Crear nuevo usuario</DialogTitle></DialogHeader>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Nombre *</Label>
+                    <Input className="h-9" value={userForm.first_name} onChange={e => setUserForm({ ...userForm, first_name: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Apellido *</Label>
+                    <Input className="h-9" value={userForm.last_name} onChange={e => setUserForm({ ...userForm, last_name: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Email *</Label>
+                    <Input className="h-9" type="email" value={userForm.email} onChange={e => setUserForm({ ...userForm, email: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Contraseña *</Label>
+                    <Input className="h-9" type="password" value={userForm.password} onChange={e => setUserForm({ ...userForm, password: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Centro</Label>
+                    <Select value={userForm.center_id} onValueChange={v => setUserForm({ ...userForm, center_id: v })}>
+                      <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                      <SelectContent>{centers?.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Especialidad</Label>
+                    <Select value={userForm.specialty} onValueChange={v => setUserForm({ ...userForm, specialty: v })}>
+                      <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="fisioterapia">Fisioterapia</SelectItem>
+                        <SelectItem value="nutricion">Nutrición</SelectItem>
+                        <SelectItem value="psicotecnicos">Psicotécnicos</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Roles *</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {ALL_ROLES.map((role) => (
+                      <label key={role} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors">
+                        <Checkbox
+                          checked={userForm.roles.includes(role)}
+                          onCheckedChange={() => toggleRole(role)}
+                        />
+                        <span className="text-sm">{ROLE_LABELS[role] || role}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-2">
+                <Button variant="outline" onClick={() => setOpenUser(false)}>Cancelar</Button>
+                <Button onClick={handleCreateUser} disabled={creatingUser}>
+                  {creatingUser && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  Crear usuario
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
       </Tabs>
     </AppLayout>
