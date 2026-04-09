@@ -407,10 +407,10 @@ export default function AgendaPage() {
   }, [slots, statusFilter]);
 
   // Filtered staff/services for slot creation forms
-  const slotFormStaff = getStaffForCenter(slotForm.center_id);
-  const slotFormServices = getServicesForStaffAndCenter(slotForm.center_id, slotForm.professional_id);
-  const demoFormStaff = getStaffForCenter(demoForm.center_id);
-  const demoFormServices = getServicesForStaffAndCenter(demoForm.center_id, demoForm.professional_id);
+  const slotFormCenters = getCentersForStaff(slotForm.professional_id);
+  const slotFormServices = getServicesForStaff(slotForm.professional_id, slotForm.center_id || undefined);
+  const demoFormCenters = getCentersForStaff(demoForm.professional_id);
+  const demoFormServices = getServicesForStaff(demoForm.professional_id, demoForm.center_id || undefined);
 
   // Filter bar staff by center
   const filterStaff = getStaffForCenter(selectedCenterId);
