@@ -106,57 +106,63 @@ export default function AgendaPage() {
 
   const isLoading = slotsLoading || aptsLoading;
 
-  // Cascade helpers using staff_center_services
-  const getStaffForCenter = (centerId: string) => {
-    if (!scsAll || scsAll.length === 0 || !centerId || centerId === "all") return staff || [];
-    const staffIds = [...new Set(scsAll.filter((s: any) => s.center_id === centerId).map((s: any) => s.staff_profile_id))];
-    if (staffIds.length === 0) return staff || [];
-    return (staff || []).filter((s: any) => staffIds.includes(s.id));
-  };
+  // Cascade helpers — use staff_center_services when available, fallback to staff_profiles fields
+  const hasScsData = scsAll && scsAll.length > 0;
 
-  const getServicesForStaffAndCenter = (centerId: string, staffId: string) => {
-    if (!scsAll || !centerId || !staffId) return services || [];
-    const serviceIds = scsAll
-      .filter((s: any) => s.center_id === centerId && s.staff_profile_id === staffId)
-      .map((s: any) => s.service_id);
-    if (serviceIds.length === 0) return services || []; // No assignments = allow all (backward compat)
-    return (services || []).filter((s: any) => serviceIds.includes(s.id));
+  const getStaffForCenter = (centerId: string) => {
+    if (!centerId || centerId === "all") return staff || [];
+    if (hasScsData) {
+      const staffIds = [...new Set(scsAll.filter((s: any) => s.center_id === centerId).map((s: any) => s.staff_profile_id))];
+      if (staffIds.length > 0) return (staff || []).filter((s: any) => staffIds.includes(s.id));
+    }
+    // Fallback: use staff_profiles.center_id
+    return (staff || []).filter((s: any) => s.center_id === centerId || !s.center_id);
   };
 
   // Get centers assigned to a professional
   const getCentersForStaff = (staffId: string) => {
-    if (!scsAll || scsAll.length === 0 || !staffId) return centers || [];
-    const centerIds = [...new Set(scsAll.filter((s: any) => s.staff_profile_id === staffId).map((s: any) => s.center_id))];
-    if (centerIds.length === 0) return centers || [];
-    return (centers || []).filter((c: any) => centerIds.includes(c.id));
+    if (!staffId) return centers || [];
+    if (hasScsData) {
+      const centerIds = [...new Set(scsAll.filter((s: any) => s.staff_profile_id === staffId).map((s: any) => s.center_id))];
+      if (centerIds.length > 0) return (centers || []).filter((c: any) => centerIds.includes(c.id));
+    }
+    // Fallback: use staff_profiles.center_id
+    const prof = (staff || []).find((s: any) => s.id === staffId);
+    if (prof?.center_id) return (centers || []).filter((c: any) => c.id === prof.center_id);
+    return centers || [];
   };
 
-  // Get services for a professional (across all centers or for a specific center)
+  // Get services for a professional
   const getServicesForStaff = (staffId: string, centerId?: string) => {
-    if (!scsAll || scsAll.length === 0 || !staffId) return services || [];
-    let filtered = scsAll.filter((s: any) => s.staff_profile_id === staffId);
-    if (centerId) filtered = filtered.filter((s: any) => s.center_id === centerId);
-    const serviceIds = [...new Set(filtered.map((s: any) => s.service_id))];
-    if (serviceIds.length === 0) return services || [];
-    return (services || []).filter((s: any) => serviceIds.includes(s.id));
+    if (!staffId) return services || [];
+    if (hasScsData) {
+      let filtered = scsAll.filter((s: any) => s.staff_profile_id === staffId);
+      if (centerId) filtered = filtered.filter((s: any) => s.center_id === centerId);
+      const serviceIds = [...new Set(filtered.map((s: any) => s.service_id))];
+      if (serviceIds.length > 0) return (services || []).filter((s: any) => serviceIds.includes(s.id));
+    }
+    // Fallback: use staff_profiles.specialty to filter services by business_line
+    const prof = (staff || []).find((s: any) => s.id === staffId);
+    if (prof?.specialty) return (services || []).filter((s: any) => s.business_line === prof.specialty);
+    return services || [];
   };
 
   // Auto-cascade when professional is selected in slot form
   const handleSlotFormProfessionalChange = (professionalId: string) => {
     const assignedCenters = getCentersForStaff(professionalId);
-    const autoCenter = assignedCenters.length === 1 ? assignedCenters[0].id : slotForm.center_id;
+    const autoCenter = assignedCenters.length === 1 ? assignedCenters[0].id : "";
     const assignedServices = getServicesForStaff(professionalId, autoCenter || undefined);
     const autoService = assignedServices.length === 1 ? assignedServices[0].id : "";
     const duration = autoService ? (assignedServices[0]?.duration_minutes?.toString() || slotForm.slot_duration) : slotForm.slot_duration;
-    setSlotForm({ ...slotForm, professional_id: professionalId, center_id: autoCenter || "", service_id: autoService, slot_duration: duration });
+    setSlotForm({ ...slotForm, professional_id: professionalId, center_id: autoCenter, service_id: autoService, slot_duration: duration });
   };
 
   const handleDemoFormProfessionalChange = (professionalId: string) => {
     const assignedCenters = getCentersForStaff(professionalId);
-    const autoCenter = assignedCenters.length === 1 ? assignedCenters[0].id : demoForm.center_id;
+    const autoCenter = assignedCenters.length === 1 ? assignedCenters[0].id : "";
     const assignedServices = getServicesForStaff(professionalId, autoCenter || undefined);
     const autoService = assignedServices.length === 1 ? assignedServices[0].id : "";
-    setDemoForm({ ...demoForm, professional_id: professionalId, center_id: autoCenter || "", service_id: autoService });
+    setDemoForm({ ...demoForm, professional_id: professionalId, center_id: autoCenter, service_id: autoService });
   };
 
   const navigate = (dir: number) => {
