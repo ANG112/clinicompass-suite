@@ -111,7 +111,8 @@ export default function SettingsPage() {
   const [creatingUser, setCreatingUser] = useState(false);
   const [editingStaff, setEditingStaff] = useState<any>(null);
   const [editRoles, setEditRoles] = useState<string[]>([]);
-  const [savingRoles, setSavingRoles] = useState(false);
+  const [editProfile, setEditProfile] = useState({ first_name: "", last_name: "", email: "", phone: "", center_id: "", specialty: "" });
+  const [savingEdit, setSavingEdit] = useState(false);
   const [userForm, setUserForm] = useState({
     email: "", password: "", first_name: "", last_name: "",
     center_id: "", specialty: "", roles: [] as string[],
