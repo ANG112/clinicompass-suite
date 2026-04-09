@@ -240,6 +240,17 @@ export default function ContactsPage({ filterCategory }: { filterCategory?: stri
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Audio recording dialog */}
+      <Dialog open={!!audioContactId} onOpenChange={(open) => { if (!open) setAudioContactId(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-heading">Nota de voz</DialogTitle>
+            <DialogDescription>Graba una nota de voz para este contacto</DialogDescription>
+          </DialogHeader>
+          {audioContactId && <PatientNotesSection contactId={audioContactId} />}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
