@@ -747,30 +747,73 @@ export default function SettingsPage() {
             </DialogContent>
           </Dialog>
 
-          {/* Edit roles dialog */}
+          {/* Edit staff dialog */}
           <Dialog open={!!editingStaff} onOpenChange={(open) => { if (!open) setEditingStaff(null); }}>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-lg">
               <DialogHeader>
-                <DialogTitle>Editar roles — {editingStaff?.first_name} {editingStaff?.last_name}</DialogTitle>
+                <DialogTitle>Editar usuario — {editingStaff?.first_name} {editingStaff?.last_name}</DialogTitle>
               </DialogHeader>
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  {ALL_ROLES.map((role) => (
-                    <label key={role} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors">
-                      <Checkbox
-                        checked={editRoles.includes(role)}
-                        onCheckedChange={() => setEditRoles(prev => prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role])}
-                      />
-                      <span className="text-sm">{ROLE_LABELS[role] || role}</span>
-                    </label>
-                  ))}
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Nombre</Label>
+                    <Input className="h-9" value={editProfile.first_name} onChange={e => setEditProfile({ ...editProfile, first_name: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Apellido</Label>
+                    <Input className="h-9" value={editProfile.last_name} onChange={e => setEditProfile({ ...editProfile, last_name: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Email</Label>
+                    <Input className="h-9" value={editProfile.email} onChange={e => setEditProfile({ ...editProfile, email: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Teléfono</Label>
+                    <Input className="h-9" value={editProfile.phone} onChange={e => setEditProfile({ ...editProfile, phone: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Centro</Label>
+                    <Select value={editProfile.center_id} onValueChange={v => setEditProfile({ ...editProfile, center_id: v })}>
+                      <SelectTrigger className="h-9"><SelectValue placeholder="Sin centro" /></SelectTrigger>
+                      <SelectContent>{centers?.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Especialidad</Label>
+                    <Select value={editProfile.specialty} onValueChange={v => setEditProfile({ ...editProfile, specialty: v })}>
+                      <SelectTrigger className="h-9"><SelectValue placeholder="Sin especialidad" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="fisioterapia">Fisioterapia</SelectItem>
+                        <SelectItem value="nutricion">Nutrición</SelectItem>
+                        <SelectItem value="psicotecnicos">Psicotécnicos</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Roles</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {ALL_ROLES.map((role) => (
+                      <label key={role} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors">
+                        <Checkbox
+                          checked={editRoles.includes(role)}
+                          onCheckedChange={() => setEditRoles(prev => prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role])}
+                        />
+                        <span className="text-sm">{ROLE_LABELS[role] || role}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </div>
               <div className="flex justify-end gap-2 mt-2">
                 <Button variant="outline" onClick={() => setEditingStaff(null)}>Cancelar</Button>
-                <Button onClick={handleSaveRoles} disabled={savingRoles}>
-                  {savingRoles && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                  Guardar roles
+                <Button onClick={handleSaveEdit} disabled={savingEdit}>
+                  {savingEdit && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  Guardar cambios
                 </Button>
               </div>
             </DialogContent>
