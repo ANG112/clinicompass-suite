@@ -232,13 +232,27 @@ export default function SettingsPage() {
     if (!editingStaff) return;
     setSavingRoles(true);
     try {
-      const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", editingStaff.user_id);
-      if (delErr) throw delErr;
-      if (editRoles.length > 0) {
-        const { error: insErr } = await supabase.from("user_roles").insert(
-          editRoles.map(role => ({ user_id: editingStaff.user_id, role: role as any }))
+      // Get current roles to compute diff (avoid deleting all then inserting, which breaks RLS)
+      const { data: currentRoles } = await supabase
+        .from("user_roles")
+        .select("id, role")
+        .eq("user_id", editingStaff.user_id);
+
+      const currentRoleNames = (currentRoles || []).map(r => r.role);
+      const toDelete = (currentRoles || []).filter(r => !editRoles.includes(r.role));
+      const toAdd = editRoles.filter(r => !currentRoleNames.includes(r));
+
+      // Delete removed roles
+      for (const r of toDelete) {
+        const { error } = await supabase.from("user_roles").delete().eq("id", r.id);
+        if (error) throw error;
+      }
+      // Insert new roles
+      if (toAdd.length > 0) {
+        const { error } = await supabase.from("user_roles").insert(
+          toAdd.map(role => ({ user_id: editingStaff.user_id, role: role as any }))
         );
-        if (insErr) throw insErr;
+        if (error) throw error;
       }
       toast.success("Roles actualizados");
       queryClient.invalidateQueries({ queryKey: ["staff-with-roles"] });
