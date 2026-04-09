@@ -123,6 +123,42 @@ export default function AgendaPage() {
     return (services || []).filter((s: any) => serviceIds.includes(s.id));
   };
 
+  // Get centers assigned to a professional
+  const getCentersForStaff = (staffId: string) => {
+    if (!scsAll || scsAll.length === 0 || !staffId) return centers || [];
+    const centerIds = [...new Set(scsAll.filter((s: any) => s.staff_profile_id === staffId).map((s: any) => s.center_id))];
+    if (centerIds.length === 0) return centers || [];
+    return (centers || []).filter((c: any) => centerIds.includes(c.id));
+  };
+
+  // Get services for a professional (across all centers or for a specific center)
+  const getServicesForStaff = (staffId: string, centerId?: string) => {
+    if (!scsAll || scsAll.length === 0 || !staffId) return services || [];
+    let filtered = scsAll.filter((s: any) => s.staff_profile_id === staffId);
+    if (centerId) filtered = filtered.filter((s: any) => s.center_id === centerId);
+    const serviceIds = [...new Set(filtered.map((s: any) => s.service_id))];
+    if (serviceIds.length === 0) return services || [];
+    return (services || []).filter((s: any) => serviceIds.includes(s.id));
+  };
+
+  // Auto-cascade when professional is selected in slot form
+  const handleSlotFormProfessionalChange = (professionalId: string) => {
+    const assignedCenters = getCentersForStaff(professionalId);
+    const autoCenter = assignedCenters.length === 1 ? assignedCenters[0].id : slotForm.center_id;
+    const assignedServices = getServicesForStaff(professionalId, autoCenter || undefined);
+    const autoService = assignedServices.length === 1 ? assignedServices[0].id : "";
+    const duration = autoService ? (assignedServices[0]?.duration_minutes?.toString() || slotForm.slot_duration) : slotForm.slot_duration;
+    setSlotForm({ ...slotForm, professional_id: professionalId, center_id: autoCenter || "", service_id: autoService, slot_duration: duration });
+  };
+
+  const handleDemoFormProfessionalChange = (professionalId: string) => {
+    const assignedCenters = getCentersForStaff(professionalId);
+    const autoCenter = assignedCenters.length === 1 ? assignedCenters[0].id : demoForm.center_id;
+    const assignedServices = getServicesForStaff(professionalId, autoCenter || undefined);
+    const autoService = assignedServices.length === 1 ? assignedServices[0].id : "";
+    setDemoForm({ ...demoForm, professional_id: professionalId, center_id: autoCenter || "", service_id: autoService });
+  };
+
   const navigate = (dir: number) => {
     if (view === "day") setCurrentDate(d => addDays(d, dir));
     else if (view === "week") setCurrentDate(d => dir > 0 ? addWeeks(d, 1) : subWeeks(d, 1));
@@ -371,10 +407,10 @@ export default function AgendaPage() {
   }, [slots, statusFilter]);
 
   // Filtered staff/services for slot creation forms
-  const slotFormStaff = getStaffForCenter(slotForm.center_id);
-  const slotFormServices = getServicesForStaffAndCenter(slotForm.center_id, slotForm.professional_id);
-  const demoFormStaff = getStaffForCenter(demoForm.center_id);
-  const demoFormServices = getServicesForStaffAndCenter(demoForm.center_id, demoForm.professional_id);
+  const slotFormCenters = getCentersForStaff(slotForm.professional_id);
+  const slotFormServices = getServicesForStaff(slotForm.professional_id, slotForm.center_id || undefined);
+  const demoFormCenters = getCentersForStaff(demoForm.professional_id);
+  const demoFormServices = getServicesForStaff(demoForm.professional_id, demoForm.center_id || undefined);
 
   // Filter bar staff by center
   const filterStaff = getStaffForCenter(selectedCenterId);
@@ -682,20 +718,22 @@ export default function AgendaPage() {
           </DialogHeader>
           <form onSubmit={handleCreateSlots} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Centro *</Label>
-                <Select value={slotForm.center_id} onValueChange={v => setSlotForm({ ...slotForm, center_id: v, professional_id: "", service_id: "" })}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                  <SelectContent>{centers?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+              <div className="space-y-1.5 col-span-2">
+                <Label className="text-xs">Profesional *</Label>
+                <Select value={slotForm.professional_id} onValueChange={handleSlotFormProfessionalChange}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar profesional" /></SelectTrigger>
+                  <SelectContent>
+                    {(staff || []).map((s: any) => <SelectItem key={s.id} value={s.id}>{s.first_name} {s.last_name}</SelectItem>)}
+                  </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Profesional *</Label>
-                <Select value={slotForm.professional_id} onValueChange={v => setSlotForm({ ...slotForm, professional_id: v, service_id: "" })}>
+                <Label className="text-xs">Centro *</Label>
+                <Select value={slotForm.center_id} onValueChange={v => setSlotForm({ ...slotForm, center_id: v, service_id: "" })}>
                   <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                   <SelectContent>
-                    {slotFormStaff.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.first_name} {s.last_name}</SelectItem>)}
-                    {slotFormStaff.length === 0 && <SelectItem value="_empty" disabled>Sin profesionales asignados</SelectItem>}
+                    {(slotForm.professional_id ? slotFormCenters : centers || []).map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    {slotForm.professional_id && slotFormCenters.length === 0 && <SelectItem value="_empty" disabled>Sin centros asignados</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>
@@ -857,20 +895,22 @@ export default function AgendaPage() {
           </DialogHeader>
           <form onSubmit={handleGenerateDemo} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Centro *</Label>
-                <Select value={demoForm.center_id} onValueChange={v => setDemoForm({ ...demoForm, center_id: v, professional_id: "", service_id: "" })}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                  <SelectContent>{centers?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+              <div className="space-y-1.5 col-span-2">
+                <Label className="text-xs">Profesional *</Label>
+                <Select value={demoForm.professional_id} onValueChange={handleDemoFormProfessionalChange}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar profesional" /></SelectTrigger>
+                  <SelectContent>
+                    {(staff || []).map((s: any) => <SelectItem key={s.id} value={s.id}>{s.first_name} {s.last_name}</SelectItem>)}
+                  </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Profesional *</Label>
-                <Select value={demoForm.professional_id} onValueChange={v => setDemoForm({ ...demoForm, professional_id: v, service_id: "" })}>
+                <Label className="text-xs">Centro *</Label>
+                <Select value={demoForm.center_id} onValueChange={v => setDemoForm({ ...demoForm, center_id: v, service_id: "" })}>
                   <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                   <SelectContent>
-                    {demoFormStaff.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.first_name} {s.last_name}</SelectItem>)}
-                    {demoFormStaff.length === 0 && <SelectItem value="_empty" disabled>Sin profesionales asignados</SelectItem>}
+                    {(demoForm.professional_id ? demoFormCenters : centers || []).map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    {demoForm.professional_id && demoFormCenters.length === 0 && <SelectItem value="_empty" disabled>Sin centros asignados</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>
