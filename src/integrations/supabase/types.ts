@@ -1053,6 +1053,127 @@ export type Database = {
           },
         ]
       }
+      patient_note_audios: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          duration_seconds: number | null
+          file_name: string | null
+          file_path: string
+          id: string
+          note_version_id: string | null
+          patient_note_id: string
+          transcription: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          duration_seconds?: number | null
+          file_name?: string | null
+          file_path: string
+          id?: string
+          note_version_id?: string | null
+          patient_note_id: string
+          transcription?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          duration_seconds?: number | null
+          file_name?: string | null
+          file_path?: string
+          id?: string
+          note_version_id?: string | null
+          patient_note_id?: string
+          transcription?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_note_audios_note_version_id_fkey"
+            columns: ["note_version_id"]
+            isOneToOne: false
+            referencedRelation: "patient_note_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_note_audios_patient_note_id_fkey"
+            columns: ["patient_note_id"]
+            isOneToOne: false
+            referencedRelation: "patient_notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_note_versions: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          patient_note_id: string
+          version_number: number
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          patient_note_id: string
+          version_number?: number
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          patient_note_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_note_versions_patient_note_id_fkey"
+            columns: ["patient_note_id"]
+            isOneToOne: false
+            referencedRelation: "patient_notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_notes: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          patient_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          id?: string
+          patient_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          patient_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_notes_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: true
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
           address: string | null
