@@ -21,7 +21,6 @@ serve(async (req) => {
     const lovableKey = Deno.env.get("LOVABLE_API_KEY");
     if (!lovableKey) throw new Error("LOVABLE_API_KEY not configured");
 
-    // Auth check
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
@@ -31,11 +30,12 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { patient_id, audio_base64, audio_file_name } = await req.json();
-    if (!patient_id) throw new Error("patient_id is required");
+    const { patient_id, contact_id, audio_base64, audio_file_name } = await req.json();
+    const entityId = patient_id || contact_id;
+    const entityField = patient_id ? "patient_id" : "contact_id";
+    if (!entityId) throw new Error("patient_id or contact_id is required");
     if (!audio_base64) throw new Error("audio_base64 is required");
 
-    // Get staff profile for created_by
     const { data: staffProfile } = await supabase
       .from("staff_profiles")
       .select("id")
@@ -43,17 +43,16 @@ serve(async (req) => {
       .maybeSingle();
     const createdBy = staffProfile?.id || null;
 
-    // 1. Upload audio to storage
+    // 1. Upload audio
     const audioBytes = Uint8Array.from(atob(audio_base64), (c) => c.charCodeAt(0));
-    const filePath = `${patient_id}/${Date.now()}_${audio_file_name || "audio.webm"}`;
+    const filePath = `${entityId}/${Date.now()}_${audio_file_name || "audio.webm"}`;
 
     const { error: uploadErr } = await supabase.storage
       .from("patient-audios")
       .upload(filePath, audioBytes, { contentType: "audio/webm", upsert: false });
     if (uploadErr) throw new Error(`Upload failed: ${uploadErr.message}`);
 
-    // 2. Transcribe audio using Lovable AI (Gemini with audio)
-    // Since we can't send raw audio to the text API, we use the AI to process the base64
+    // 2. Transcribe audio
     const transcriptionResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -73,10 +72,7 @@ serve(async (req) => {
               { type: "text", text: "Transcribe este audio de forma precisa:" },
               {
                 type: "input_audio",
-                input_audio: {
-                  data: audio_base64,
-                  format: "wav",
-                },
+                input_audio: { data: audio_base64, format: "wav" },
               },
             ],
           },
@@ -90,23 +86,25 @@ serve(async (req) => {
       transcription = transcriptionData.choices?.[0]?.message?.content || "";
     }
 
-    // If transcription failed via audio, try with a fallback prompt
     if (!transcription) {
-      // Fallback: ask user to provide text transcription manually later
       transcription = "[Transcripción pendiente - el audio ha sido guardado]";
     }
 
-    // 3. Get or create patient_notes record
+    // 3. Get or create note record
     let { data: patientNote } = await supabase
       .from("patient_notes")
       .select("*")
-      .eq("patient_id", patient_id)
+      .eq(entityField, entityId)
       .maybeSingle();
 
     if (!patientNote) {
+      const insertData: any = { content: "", updated_by: createdBy };
+      if (patient_id) insertData.patient_id = patient_id;
+      if (contact_id) insertData.contact_id = contact_id;
+
       const { data: newNote, error: createErr } = await supabase
         .from("patient_notes")
-        .insert({ patient_id, content: "", updated_by: createdBy })
+        .insert(insertData)
         .select()
         .single();
       if (createErr) throw new Error(`Create note failed: ${createErr.message}`);
@@ -115,7 +113,7 @@ serve(async (req) => {
 
     const currentContent = patientNote.content || "";
 
-    // 4. Use AI to merge current notes with new transcription
+    // 4. Merge with AI
     const mergeResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -142,13 +140,11 @@ REGLAS:
 - Si un apartado no tiene información, déjalo vacío con un guión: -
 - Integra la nueva información en el apartado que corresponda
 - Si la nueva información contradice o actualiza algo existente, actualiza ese dato
-- Si la nueva información es completamente nueva, añádela al apartado correcto
 - Elimina redundancias y lenguaje coloquial
 - Mantén un tono clínico y profesional
-- Preserva TODA la información importante previa que no sea contradicha
+- Preserva TODA la información importante previa
 - NO añadas información inventada
-- NO repitas información
-- Devuelve SOLO el contenido estructurado, sin explicaciones ni comentarios`,
+- Devuelve SOLO el contenido estructurado`,
           },
           {
             role: "user",
@@ -158,7 +154,7 @@ ${currentContent || "(Sin notas previas)"}
 NUEVA TRANSCRIPCIÓN A INTEGRAR:
 ${transcription}
 
-Genera la versión actualizada de las notas del paciente:`,
+Genera la versión actualizada de las notas:`,
           },
         ],
       }),
@@ -170,7 +166,7 @@ Genera la versión actualizada de las notas del paciente:`,
       mergedContent = mergeData.choices?.[0]?.message?.content || currentContent;
     }
 
-    // 5. Get current max version number
+    // 5. Version management
     const { data: maxVersion } = await supabase
       .from("patient_note_versions")
       .select("version_number")
@@ -180,7 +176,6 @@ Genera la versión actualizada de las notas del paciente:`,
       .maybeSingle();
     const nextVersion = (maxVersion?.version_number || 0) + 1;
 
-    // 6. Save previous version if content existed
     if (currentContent) {
       await supabase.from("patient_note_versions").insert({
         patient_note_id: patientNote.id,
@@ -190,7 +185,6 @@ Genera la versión actualizada de las notas del paciente:`,
       });
     }
 
-    // 7. Save new version
     const { data: newVersion } = await supabase
       .from("patient_note_versions")
       .insert({
@@ -202,13 +196,13 @@ Genera la versión actualizada de las notas del paciente:`,
       .select()
       .single();
 
-    // 8. Update current content
+    // 6. Update current content
     await supabase
       .from("patient_notes")
       .update({ content: mergedContent, updated_by: createdBy })
       .eq("id", patientNote.id);
 
-    // 9. Save audio metadata
+    // 7. Save audio metadata
     await supabase.from("patient_note_audios").insert({
       patient_note_id: patientNote.id,
       note_version_id: newVersion?.id || null,

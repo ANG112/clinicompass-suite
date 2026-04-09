@@ -9,23 +9,24 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
 interface Props {
-  patientId: string;
+  patientId?: string;
+  contactId?: string;
 }
 
-type ProcessingStep = "idle" | "recording" | "uploading" | "transcribing" | "processing" | "done" | "error";
+type ProcessingStep = "idle" | "recording" | "uploading" | "processing" | "done" | "error";
 
 const stepLabels: Record<ProcessingStep, string> = {
   idle: "",
   recording: "Grabando audio...",
   uploading: "Subiendo audio...",
-  transcribing: "Transcribiendo...",
   processing: "Procesando con IA...",
   done: "¡Listo!",
   error: "Error en el procesamiento",
 };
 
-export function PatientNotesSection({ patientId }: Props) {
-  const { data: patientNote, isLoading } = usePatientNote(patientId);
+export function PatientNotesSection({ patientId, contactId }: Props) {
+  const entityId = patientId || contactId;
+  const { data: patientNote, isLoading } = usePatientNote({ patientId, contactId });
   const { data: versions } = usePatientNoteVersions(patientNote?.id);
   const { data: audios } = usePatientNoteAudios(patientNote?.id);
   const processNote = useProcessPatientNote();
@@ -70,7 +71,6 @@ export function PatientNotesSection({ patientId }: Props) {
         setStep("uploading");
 
         try {
-          // Convert to base64
           const reader = new FileReader();
           const base64 = await new Promise<string>((res, rej) => {
             reader.onload = () => {
@@ -83,14 +83,15 @@ export function PatientNotesSection({ patientId }: Props) {
 
           setStep("processing");
 
-          const result = await processNote.mutateAsync({
-            patientId,
+          await processNote.mutateAsync({
+            patientId: patientId || undefined,
+            contactId: contactId || undefined,
             audioBase64: base64,
             fileName: `nota_${Date.now()}.webm`,
           });
 
           setStep("done");
-          toast.success("Notas del paciente actualizadas correctamente");
+          toast.success("Notas actualizadas correctamente");
           setTimeout(() => setStep("idle"), 2000);
         } catch (err: any) {
           setStep("error");
@@ -101,7 +102,7 @@ export function PatientNotesSection({ patientId }: Props) {
       };
       mediaRecorder.stop();
     });
-  }, [patientId, processNote]);
+  }, [patientId, contactId, processNote]);
 
   const playAudio = async (filePath: string, audioId: string) => {
     if (playingAudio === audioId) {
@@ -142,9 +143,10 @@ export function PatientNotesSection({ patientId }: Props) {
   const isRecording = step === "recording";
   const isBusy = step !== "idle" && step !== "done" && step !== "error";
 
+  if (!entityId) return null;
+
   return (
     <div className="space-y-4">
-      {/* Main notes card */}
       <div className="stat-card">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold font-heading text-foreground">Notas del paciente</h3>
@@ -162,7 +164,6 @@ export function PatientNotesSection({ patientId }: Props) {
           </div>
         </div>
 
-        {/* Notes content */}
         <div className="min-h-[120px] p-4 rounded-lg bg-muted/50 border border-border/50 mb-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
@@ -171,7 +172,6 @@ export function PatientNotesSection({ patientId }: Props) {
           )}
         </div>
 
-        {/* Recording controls */}
         <div className="flex items-center gap-3">
           {isRecording ? (
             <Button variant="destructive" size="sm" className="gap-2" onClick={stopRecording}>
@@ -213,7 +213,7 @@ export function PatientNotesSection({ patientId }: Props) {
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-heading">Historial de versiones</DialogTitle>
-            <DialogDescription>Versiones anteriores de las notas del paciente</DialogDescription>
+            <DialogDescription>Versiones anteriores de las notas</DialogDescription>
           </DialogHeader>
           {!versions?.length ? (
             <p className="text-sm text-muted-foreground text-center py-8">Sin historial de versiones</p>
@@ -248,7 +248,7 @@ export function PatientNotesSection({ patientId }: Props) {
         <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-heading">Historial de audios</DialogTitle>
-            <DialogDescription>Grabaciones de voz asociadas a este paciente</DialogDescription>
+            <DialogDescription>Grabaciones de voz asociadas</DialogDescription>
           </DialogHeader>
           {!audios?.length ? (
             <p className="text-sm text-muted-foreground text-center py-8">Sin audios grabados</p>

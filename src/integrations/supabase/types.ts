@@ -1055,6 +1055,7 @@ export type Database = {
       }
       patient_note_audios: {
         Row: {
+          contact_id: string | null
           created_at: string
           created_by: string | null
           duration_seconds: number | null
@@ -1066,6 +1067,7 @@ export type Database = {
           transcription: string | null
         }
         Insert: {
+          contact_id?: string | null
           created_at?: string
           created_by?: string | null
           duration_seconds?: number | null
@@ -1077,6 +1079,7 @@ export type Database = {
           transcription?: string | null
         }
         Update: {
+          contact_id?: string | null
           created_at?: string
           created_by?: string | null
           duration_seconds?: number | null
@@ -1088,6 +1091,13 @@ export type Database = {
           transcription?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "patient_note_audios_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "patient_note_audios_note_version_id_fkey"
             columns: ["note_version_id"]
@@ -1106,6 +1116,7 @@ export type Database = {
       }
       patient_note_versions: {
         Row: {
+          contact_id: string | null
           content: string
           created_at: string
           created_by: string | null
@@ -1114,6 +1125,7 @@ export type Database = {
           version_number: number
         }
         Insert: {
+          contact_id?: string | null
           content?: string
           created_at?: string
           created_by?: string | null
@@ -1122,6 +1134,7 @@ export type Database = {
           version_number?: number
         }
         Update: {
+          contact_id?: string | null
           content?: string
           created_at?: string
           created_by?: string | null
@@ -1130,6 +1143,13 @@ export type Database = {
           version_number?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "patient_note_versions_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "patient_note_versions_patient_note_id_fkey"
             columns: ["patient_note_id"]
@@ -1141,30 +1161,40 @@ export type Database = {
       }
       patient_notes: {
         Row: {
+          contact_id: string | null
           content: string
           created_at: string
           id: string
-          patient_id: string
+          patient_id: string | null
           updated_at: string
           updated_by: string | null
         }
         Insert: {
+          contact_id?: string | null
           content?: string
           created_at?: string
           id?: string
-          patient_id: string
+          patient_id?: string | null
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
+          contact_id?: string | null
           content?: string
           created_at?: string
           id?: string
-          patient_id?: string
+          patient_id?: string | null
           updated_at?: string
           updated_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "patient_notes_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "patient_notes_patient_id_fkey"
             columns: ["patient_id"]
