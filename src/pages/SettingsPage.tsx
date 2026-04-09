@@ -667,7 +667,7 @@ export default function SettingsPage() {
                     </TableCell>
                     {isGerencia && (
                       <TableCell>
-                        <button className="p-1.5 rounded-md hover:bg-muted transition-colors" onClick={() => openEditRoles(s)}>
+                        <button className="p-1.5 rounded-md hover:bg-muted transition-colors" onClick={() => openEditStaff(s)}>
                           <Pencil className="h-4 w-4 text-muted-foreground" />
                         </button>
                       </TableCell>
