@@ -1439,6 +1439,52 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_center_services: {
+        Row: {
+          center_id: string
+          created_at: string
+          id: string
+          service_id: string
+          staff_profile_id: string
+        }
+        Insert: {
+          center_id: string
+          created_at?: string
+          id?: string
+          service_id: string
+          staff_profile_id: string
+        }
+        Update: {
+          center_id?: string
+          created_at?: string
+          id?: string
+          service_id?: string
+          staff_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_center_services_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_center_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_center_services_staff_profile_id_fkey"
+            columns: ["staff_profile_id"]
+            isOneToOne: false
+            referencedRelation: "staff_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_profiles: {
         Row: {
           active: boolean
