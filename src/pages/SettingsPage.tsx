@@ -238,7 +238,7 @@ export default function SettingsPage() {
         .select("id, role")
         .eq("user_id", editingStaff.user_id);
 
-      const currentRoleNames = (currentRoles || []).map(r => r.role);
+      const currentRoleNames = (currentRoles || []).map(r => r.role as string);
       const toDelete = (currentRoles || []).filter(r => !editRoles.includes(r.role));
       const toAdd = editRoles.filter(r => !currentRoleNames.includes(r));
 
