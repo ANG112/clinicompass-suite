@@ -9,14 +9,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Search, Loader2, Users, Eye } from "lucide-react";
+import { Plus, Search, Loader2, Users, Eye, Mic } from "lucide-react";
 import { useContacts, useContactCategories, useCreateContact } from "@/hooks/useContacts";
 import { useCenters } from "@/hooks/useCenters";
 import { useCenterFilter } from "@/components/layout/CenterSelector";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { format } from "date-fns";
-
+import { PatientNotesSection } from "@/components/patient/PatientNotesSection";
 const categoryVariant: Record<string, "info" | "success" | "primary"> = {
   lead: "info",
   cliente: "success",
@@ -27,6 +27,7 @@ export default function ContactsPage({ filterCategory }: { filterCategory?: stri
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState(filterCategory || "all");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [audioContactId, setAudioContactId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { selectedCenterId } = useCenterFilter();
 
@@ -144,9 +145,18 @@ export default function ContactsPage({ filterCategory }: { filterCategory?: stri
                     <TableCell className="text-sm text-muted-foreground">{c.source || "-"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{format(new Date(c.created_at), "dd/MM/yyyy")}</TableCell>
                     <TableCell>
-                      <button className="p-1.5 rounded-md hover:bg-muted transition-colors" onClick={(e) => { e.stopPropagation(); navigate(`/contactos/${c.id}`); }}>
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          className="p-1.5 rounded-md hover:bg-primary/10 transition-colors"
+                          title="Grabar nota de voz"
+                          onClick={(e) => { e.stopPropagation(); setAudioContactId(c.id); }}
+                        >
+                          <Mic className="h-4 w-4 text-primary" />
+                        </button>
+                        <button className="p-1.5 rounded-md hover:bg-muted transition-colors" onClick={(e) => { e.stopPropagation(); navigate(`/contactos/${c.id}`); }}>
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -228,6 +238,17 @@ export default function ContactsPage({ filterCategory }: { filterCategory?: stri
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Audio recording dialog */}
+      <Dialog open={!!audioContactId} onOpenChange={(open) => { if (!open) setAudioContactId(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-heading">Nota de voz</DialogTitle>
+            <DialogDescription>Graba una nota de voz para este contacto</DialogDescription>
+          </DialogHeader>
+          {audioContactId && <PatientNotesSection contactId={audioContactId} />}
         </DialogContent>
       </Dialog>
     </AppLayout>
