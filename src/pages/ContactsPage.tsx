@@ -9,14 +9,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Search, Loader2, Users, Eye } from "lucide-react";
+import { Plus, Search, Loader2, Users, Eye, Mic } from "lucide-react";
 import { useContacts, useContactCategories, useCreateContact } from "@/hooks/useContacts";
 import { useCenters } from "@/hooks/useCenters";
 import { useCenterFilter } from "@/components/layout/CenterSelector";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { format } from "date-fns";
-
+import { PatientNotesSection } from "@/components/patient/PatientNotesSection";
 const categoryVariant: Record<string, "info" | "success" | "primary"> = {
   lead: "info",
   cliente: "success",
