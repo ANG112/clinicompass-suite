@@ -222,8 +222,9 @@ export default function PatientDetailPage() {
       </div>
 
       <Tabs defaultValue="info" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="info">Información</TabsTrigger>
+          <TabsTrigger value="notes"><Stethoscope className="h-3.5 w-3.5 mr-1" />Notas</TabsTrigger>
           <TabsTrigger value="appointments">Citas ({appointments?.length || 0})</TabsTrigger>
           <TabsTrigger value="interactions">Interacciones ({interactions?.length || 0})</TabsTrigger>
           <TabsTrigger value="documents">Documentos ({documents?.length || 0})</TabsTrigger>
