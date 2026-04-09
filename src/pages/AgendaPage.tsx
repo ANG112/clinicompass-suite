@@ -895,20 +895,22 @@ export default function AgendaPage() {
           </DialogHeader>
           <form onSubmit={handleGenerateDemo} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Centro *</Label>
-                <Select value={demoForm.center_id} onValueChange={v => setDemoForm({ ...demoForm, center_id: v, professional_id: "", service_id: "" })}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                  <SelectContent>{centers?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+              <div className="space-y-1.5 col-span-2">
+                <Label className="text-xs">Profesional *</Label>
+                <Select value={demoForm.professional_id} onValueChange={handleDemoFormProfessionalChange}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar profesional" /></SelectTrigger>
+                  <SelectContent>
+                    {(staff || []).map((s: any) => <SelectItem key={s.id} value={s.id}>{s.first_name} {s.last_name}</SelectItem>)}
+                  </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Profesional *</Label>
-                <Select value={demoForm.professional_id} onValueChange={v => setDemoForm({ ...demoForm, professional_id: v, service_id: "" })}>
+                <Label className="text-xs">Centro *</Label>
+                <Select value={demoForm.center_id} onValueChange={v => setDemoForm({ ...demoForm, center_id: v, service_id: "" })}>
                   <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                   <SelectContent>
-                    {demoFormStaff.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.first_name} {s.last_name}</SelectItem>)}
-                    {demoFormStaff.length === 0 && <SelectItem value="_empty" disabled>Sin profesionales asignados</SelectItem>}
+                    {(demoForm.professional_id ? demoFormCenters : centers || []).map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    {demoForm.professional_id && demoFormCenters.length === 0 && <SelectItem value="_empty" disabled>Sin centros asignados</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>
