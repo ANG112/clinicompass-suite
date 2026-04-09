@@ -108,8 +108,9 @@ export default function AgendaPage() {
 
   // Cascade helpers using staff_center_services
   const getStaffForCenter = (centerId: string) => {
-    if (!scsAll || !centerId || centerId === "all") return staff || [];
+    if (!scsAll || scsAll.length === 0 || !centerId || centerId === "all") return staff || [];
     const staffIds = [...new Set(scsAll.filter((s: any) => s.center_id === centerId).map((s: any) => s.staff_profile_id))];
+    if (staffIds.length === 0) return staff || [];
     return (staff || []).filter((s: any) => staffIds.includes(s.id));
   };
 
