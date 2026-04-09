@@ -250,7 +250,7 @@ export default function SettingsPage() {
           email: editProfile.email || null,
           phone: editProfile.phone || null,
           center_id: editProfile.center_id || null,
-          specialty: editProfile.specialty || null,
+          specialty: (editProfile.specialty || null) as any,
         })
         .eq("id", editingStaff.id);
       if (profileError) throw profileError;
