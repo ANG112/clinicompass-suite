@@ -11,11 +11,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import { Settings, Users, Tag, Shield, Receipt, Plus, Loader2, Pencil } from "lucide-react";
+import { Settings, Users, Tag, Shield, Receipt, Plus, Loader2, Pencil, MapPin, Trash2 } from "lucide-react";
 import { useInvoiceSeries, useCreateInvoiceSeries } from "@/hooks/useBilling";
 import { useAllServices, useCreateService, useUpdateService } from "@/hooks/useServicesAdmin";
 import { useCenters } from "@/hooks/useCenters";
 import { useAuth } from "@/hooks/useAuth";
+import { useAllStaffCenterServices, useAddStaffCenterService, useRemoveStaffCenterService } from "@/hooks/useStaffCenterServices";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -133,6 +134,40 @@ export default function SettingsPage() {
     },
   });
 
+  // Staff center services (assignments)
+  const { data: scsAll, isLoading: scsLoading } = useAllStaffCenterServices();
+  const addScs = useAddStaffCenterService();
+  const removeScs = useRemoveStaffCenterService();
+  const [openAssign, setOpenAssign] = useState(false);
+  const [assignForm, setAssignForm] = useState({ staff_profile_id: "", center_id: "", service_id: "" });
+
+  const handleAddAssignment = async () => {
+    if (!assignForm.staff_profile_id || !assignForm.center_id || !assignForm.service_id) {
+      toast.error("Selecciona profesional, centro y servicio");
+      return;
+    }
+    // Check duplicate
+    const dup = scsAll?.find((a: any) =>
+      a.staff_profile_id === assignForm.staff_profile_id &&
+      a.center_id === assignForm.center_id &&
+      a.service_id === assignForm.service_id
+    );
+    if (dup) { toast.error("Esta asignación ya existe"); return; }
+    try {
+      await addScs.mutateAsync(assignForm);
+      toast.success("Asignación creada");
+      setOpenAssign(false);
+      setAssignForm({ staff_profile_id: "", center_id: "", service_id: "" });
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const handleRemoveAssignment = async (id: string) => {
+    try {
+      await removeScs.mutateAsync(id);
+      toast.success("Asignación eliminada");
+    } catch (e: any) { toast.error(e.message); }
+  };
+
   const handleCreateSeries = async () => {
     if (!seriesForm.center_id || !seriesForm.prefix) { toast.error("Completa centro y prefijo"); return; }
     try {
@@ -197,10 +232,8 @@ export default function SettingsPage() {
     if (!editingStaff) return;
     setSavingRoles(true);
     try {
-      // Delete existing roles
       const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", editingStaff.user_id);
       if (delErr) throw delErr;
-      // Insert new roles
       if (editRoles.length > 0) {
         const { error: insErr } = await supabase.from("user_roles").insert(
           editRoles.map(role => ({ user_id: editingStaff.user_id, role: role as any }))
@@ -224,10 +257,11 @@ export default function SettingsPage() {
       <PageHeader title="Configuración" description="Ajustes generales del sistema" />
 
       <Tabs defaultValue="general" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="general" className="gap-1"><Settings className="h-3.5 w-3.5" /> General</TabsTrigger>
           <TabsTrigger value="roles" className="gap-1"><Shield className="h-3.5 w-3.5" /> Roles</TabsTrigger>
           <TabsTrigger value="services" className="gap-1"><Tag className="h-3.5 w-3.5" /> Servicios</TabsTrigger>
+          <TabsTrigger value="assignments" className="gap-1"><MapPin className="h-3.5 w-3.5" /> Asignaciones</TabsTrigger>
           <TabsTrigger value="billing" className="gap-1"><Receipt className="h-3.5 w-3.5" /> Series facturación</TabsTrigger>
           <TabsTrigger value="team" className="gap-1"><Users className="h-3.5 w-3.5" /> Equipo</TabsTrigger>
         </TabsList>
@@ -385,6 +419,107 @@ export default function SettingsPage() {
           </Dialog>
         </TabsContent>
 
+        {/* NEW: Assignments tab */}
+        <TabsContent value="assignments">
+          <div className="stat-card max-w-4xl">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-sm font-semibold font-heading text-foreground">Asignaciones profesional → centro → servicio</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Define en qué centros y para qué servicios puede trabajar cada profesional. La agenda respetará estas restricciones.
+                </p>
+              </div>
+              {isGerencia && (
+                <Button size="sm" onClick={() => { setAssignForm({ staff_profile_id: "", center_id: "", service_id: "" }); setOpenAssign(true); }}>
+                  <Plus className="h-4 w-4 mr-1" />Nueva asignación
+                </Button>
+              )}
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="font-semibold">Profesional</TableHead>
+                  <TableHead className="font-semibold">Centro</TableHead>
+                  <TableHead className="font-semibold">Servicio</TableHead>
+                  <TableHead className="font-semibold">Especialidad</TableHead>
+                  {isGerencia && <TableHead className="w-[60px]"></TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {scsLoading ? (
+                  <TableRow><TableCell colSpan={5} className="text-center py-4 text-muted-foreground">Cargando...</TableCell></TableRow>
+                ) : !scsAll?.length ? (
+                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    Sin asignaciones. Añade asignaciones para que la agenda filtre profesionales y servicios por centro.
+                  </TableCell></TableRow>
+                ) : scsAll.map((a: any) => (
+                  <TableRow key={a.id}>
+                    <TableCell className="text-sm font-medium">{a.staff?.first_name} {a.staff?.last_name}</TableCell>
+                    <TableCell className="text-sm">{a.center?.name || "-"}</TableCell>
+                    <TableCell className="text-sm">{a.service?.name || "-"}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-[10px]">
+                        {a.service?.business_line === "fisioterapia" ? "Fisioterapia" : a.service?.business_line === "nutricion" ? "Nutrición" : "Psicotécnicos"}
+                      </Badge>
+                    </TableCell>
+                    {isGerencia && (
+                      <TableCell>
+                        <button className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors" onClick={() => handleRemoveAssignment(a.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <Dialog open={openAssign} onOpenChange={setOpenAssign}>
+            <DialogContent className="max-w-md">
+              <DialogHeader><DialogTitle>Nueva asignación</DialogTitle></DialogHeader>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Profesional *</Label>
+                  <Select value={assignForm.staff_profile_id} onValueChange={v => setAssignForm({ ...assignForm, staff_profile_id: v })}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                    <SelectContent>
+                      {staffList?.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.first_name} {s.last_name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Centro *</Label>
+                  <Select value={assignForm.center_id} onValueChange={v => setAssignForm({ ...assignForm, center_id: v })}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                    <SelectContent>
+                      {centers?.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Servicio *</Label>
+                  <Select value={assignForm.service_id} onValueChange={v => setAssignForm({ ...assignForm, service_id: v })}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                    <SelectContent>
+                      {allServices?.filter((s: any) => s.active).map((s: any) => (
+                        <SelectItem key={s.id} value={s.id}>{s.name} ({s.business_line === "fisioterapia" ? "Fisio" : s.business_line === "nutricion" ? "Nutri" : "Psico"})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-2">
+                <Button variant="outline" onClick={() => setOpenAssign(false)}>Cancelar</Button>
+                <Button onClick={handleAddAssignment} disabled={addScs.isPending}>
+                  {addScs.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  Crear asignación
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+
         <TabsContent value="billing">
           <div className="stat-card max-w-3xl">
             <div className="flex items-center justify-between mb-4">
@@ -474,9 +609,9 @@ export default function SettingsPage() {
                </TableHeader>
               <TableBody>
                 {staffLoading ? (
-                  <TableRow><TableCell colSpan={4} className="text-center py-4 text-muted-foreground">Cargando...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center py-4 text-muted-foreground">Cargando...</TableCell></TableRow>
                 ) : !staffList?.length ? (
-                  <TableRow><TableCell colSpan={4} className="text-center py-4 text-muted-foreground">Sin usuarios</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center py-4 text-muted-foreground">Sin usuarios</TableCell></TableRow>
                 ) : staffList.map((s: any) => (
                   <TableRow key={s.id}>
                     <TableCell className="text-sm font-medium">{s.first_name} {s.last_name}</TableCell>
