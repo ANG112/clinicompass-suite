@@ -17,6 +17,7 @@ import { useAvailabilitySlots, useCreateAvailabilitySlotsBatch, useBookSlot, use
 import { useContacts } from "@/hooks/useContacts";
 import { useCenters } from "@/hooks/useCenters";
 import { useCenterFilter } from "@/components/layout/CenterSelector";
+import { useAllStaffCenterServices } from "@/hooks/useStaffCenterServices";
 import { toast } from "sonner";
 import { format, addDays, startOfWeek, startOfMonth, endOfMonth, endOfWeek, eachDayOfInterval, isSameDay, addWeeks, addMonths, subWeeks, subMonths, isToday, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -94,6 +95,7 @@ export default function AgendaPage() {
   const { data: services } = useServices();
   const { data: contacts } = useContacts();
   const { data: centers } = useCenters();
+  const { data: scsAll } = useAllStaffCenterServices();
 
   const createSlotsBatch = useCreateAvailabilitySlotsBatch();
   const bookSlot = useBookSlot();
@@ -103,6 +105,22 @@ export default function AgendaPage() {
   const updateApt = useUpdateAppointment();
 
   const isLoading = slotsLoading || aptsLoading;
+
+  // Cascade helpers using staff_center_services
+  const getStaffForCenter = (centerId: string) => {
+    if (!scsAll || !centerId || centerId === "all") return staff || [];
+    const staffIds = [...new Set(scsAll.filter((s: any) => s.center_id === centerId).map((s: any) => s.staff_profile_id))];
+    return (staff || []).filter((s: any) => staffIds.includes(s.id));
+  };
+
+  const getServicesForStaffAndCenter = (centerId: string, staffId: string) => {
+    if (!scsAll || !centerId || !staffId) return services || [];
+    const serviceIds = scsAll
+      .filter((s: any) => s.center_id === centerId && s.staff_profile_id === staffId)
+      .map((s: any) => s.service_id);
+    if (serviceIds.length === 0) return services || []; // No assignments = allow all (backward compat)
+    return (services || []).filter((s: any) => serviceIds.includes(s.id));
+  };
 
   const navigate = (dir: number) => {
     if (view === "day") setCurrentDate(d => addDays(d, dir));
@@ -144,7 +162,6 @@ export default function AgendaPage() {
     let day = parseISO(f.date_from);
     const endDay = parseISO(f.date_to);
     while (day <= endDay) {
-      // Skip weekends
       const dow = day.getDay();
       if (dow !== 0 && dow !== 6) {
         const [sh, sm] = f.start_time.split(":").map(Number);
@@ -204,10 +221,30 @@ export default function AgendaPage() {
       toast.error("Completa centro, profesional y fechas");
       return;
     }
+
+    // Validate assignment
+    if (scsAll && scsAll.length > 0) {
+      const hasAssignment = scsAll.some((a: any) =>
+        a.staff_profile_id === slotForm.professional_id && a.center_id === slotForm.center_id
+      );
+      if (!hasAssignment) {
+        toast.error("Este profesional no tiene asignaciones en este centro. Configúralo en Configuración → Equipo.");
+        return;
+      }
+      if (slotForm.service_id) {
+        const hasServiceAssignment = scsAll.some((a: any) =>
+          a.staff_profile_id === slotForm.professional_id && a.center_id === slotForm.center_id && a.service_id === slotForm.service_id
+        );
+        if (!hasServiceAssignment) {
+          toast.error("Este profesional no puede prestar este servicio en este centro.");
+          return;
+        }
+      }
+    }
+
     const newSlots = generateSlots(slotForm);
     if (newSlots.length === 0) { toast.error("No se generaron huecos con estos parámetros"); return; }
     
-    // Check for overlaps
     const overlaps = checkOverlap(newSlots);
     if (overlaps.length > 0) {
       toast.error(`Hay ${overlaps.length} hueco(s) que solapan con disponibilidad existente. Ajusta las horas.`);
@@ -250,7 +287,6 @@ export default function AgendaPage() {
     const startDt = new Date(`${selectedSlot.date}T${selectedSlot.start_time}:00`).toISOString();
     const endDt = new Date(new Date(`${selectedSlot.date}T${selectedSlot.start_time}:00`).getTime() + dur * 60000).toISOString();
     
-    // Check for overlapping appointments for the same professional
     if (selectedSlot.professional_id && appointments) {
       const overlap = appointments.find((a: any) => 
         a.professional_id === selectedSlot.professional_id &&
@@ -292,7 +328,6 @@ export default function AgendaPage() {
   const changeAptStatus = async (id: string, status: string) => {
     try {
       await updateApt.mutateAsync({ id, status: status as any });
-      // If cancelled, free the slot
       if (status === "cancelada") {
         const slot = slots?.find((s: any) => s.appointment_id === id);
         if (slot) await freeSlotMut.mutateAsync(slot.id);
@@ -334,6 +369,15 @@ export default function AgendaPage() {
     return filtered;
   }, [slots, statusFilter]);
 
+  // Filtered staff/services for slot creation forms
+  const slotFormStaff = getStaffForCenter(slotForm.center_id);
+  const slotFormServices = getServicesForStaffAndCenter(slotForm.center_id, slotForm.professional_id);
+  const demoFormStaff = getStaffForCenter(demoForm.center_id);
+  const demoFormServices = getServicesForStaffAndCenter(demoForm.center_id, demoForm.professional_id);
+
+  // Filter bar staff by center
+  const filterStaff = getStaffForCenter(selectedCenterId);
+
   return (
     <AppLayout>
       <PageHeader title="Agenda" description="Disponibilidad y citas por profesional, centro y servicio">
@@ -368,7 +412,7 @@ export default function AgendaPage() {
             <SelectTrigger className="w-[180px] h-9"><SelectValue placeholder="Profesional" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
-              {staff?.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.first_name} {s.last_name}</SelectItem>)}
+              {filterStaff.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.first_name} {s.last_name}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={specialtyFilter} onValueChange={setSpecialtyFilter}>
@@ -639,16 +683,19 @@ export default function AgendaPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Centro *</Label>
-                <Select value={slotForm.center_id} onValueChange={v => setSlotForm({ ...slotForm, center_id: v })}>
+                <Select value={slotForm.center_id} onValueChange={v => setSlotForm({ ...slotForm, center_id: v, professional_id: "", service_id: "" })}>
                   <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                   <SelectContent>{centers?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Profesional *</Label>
-                <Select value={slotForm.professional_id} onValueChange={v => setSlotForm({ ...slotForm, professional_id: v })}>
+                <Select value={slotForm.professional_id} onValueChange={v => setSlotForm({ ...slotForm, professional_id: v, service_id: "" })}>
                   <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                  <SelectContent>{staff?.map(s => <SelectItem key={s.id} value={s.id}>{s.first_name} {s.last_name}</SelectItem>)}</SelectContent>
+                  <SelectContent>
+                    {slotFormStaff.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.first_name} {s.last_name}</SelectItem>)}
+                    {slotFormStaff.length === 0 && <SelectItem value="_empty" disabled>Sin profesionales asignados</SelectItem>}
+                  </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5 col-span-2">
@@ -660,7 +707,7 @@ export default function AgendaPage() {
                   <SelectTrigger className="h-9"><SelectValue placeholder="Cualquier servicio" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Sin servicio específico</SelectItem>
-                    {(services || []).map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name} — {s.business_line === "fisioterapia" ? "Fisio" : s.business_line === "nutricion" ? "Nutri" : "Psico"} ({s.duration_minutes}min)</SelectItem>)}
+                    {slotFormServices.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name} — {s.business_line === "fisioterapia" ? "Fisio" : s.business_line === "nutricion" ? "Nutri" : "Psico"} ({s.duration_minutes}min)</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -811,16 +858,19 @@ export default function AgendaPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Centro *</Label>
-                <Select value={demoForm.center_id} onValueChange={v => setDemoForm({ ...demoForm, center_id: v })}>
+                <Select value={demoForm.center_id} onValueChange={v => setDemoForm({ ...demoForm, center_id: v, professional_id: "", service_id: "" })}>
                   <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                   <SelectContent>{centers?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Profesional *</Label>
-                <Select value={demoForm.professional_id} onValueChange={v => setDemoForm({ ...demoForm, professional_id: v })}>
+                <Select value={demoForm.professional_id} onValueChange={v => setDemoForm({ ...demoForm, professional_id: v, service_id: "" })}>
                   <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                  <SelectContent>{staff?.map(s => <SelectItem key={s.id} value={s.id}>{s.first_name} {s.last_name}</SelectItem>)}</SelectContent>
+                  <SelectContent>
+                    {demoFormStaff.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.first_name} {s.last_name}</SelectItem>)}
+                    {demoFormStaff.length === 0 && <SelectItem value="_empty" disabled>Sin profesionales asignados</SelectItem>}
+                  </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5 col-span-2">
@@ -832,7 +882,7 @@ export default function AgendaPage() {
                   <SelectTrigger className="h-9"><SelectValue placeholder="Cualquier servicio" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Sin servicio específico</SelectItem>
-                    {(services || []).map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name} — {s.business_line === "fisioterapia" ? "Fisio" : s.business_line === "nutricion" ? "Nutri" : "Psico"} ({s.duration_minutes}min)</SelectItem>)}
+                    {demoFormServices.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name} — {s.business_line === "fisioterapia" ? "Fisio" : s.business_line === "nutricion" ? "Nutri" : "Psico"} ({s.duration_minutes}min)</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
