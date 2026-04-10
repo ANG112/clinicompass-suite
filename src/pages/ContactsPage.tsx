@@ -145,16 +145,19 @@ export default function ContactsPage({ filterCategory }: { filterCategory?: stri
                     <TableCell className="text-sm text-muted-foreground">{c.source || "-"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{format(new Date(c.created_at), "dd/MM/yyyy")}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-2">
                         <button
-                          className="p-1.5 rounded-md hover:bg-primary/10 transition-colors"
+                          className="h-9 w-9 rounded-full border border-primary/20 bg-primary/5 hover:bg-primary/15 flex items-center justify-center transition-colors"
                           title="Grabar nota de voz"
                           onClick={(e) => { e.stopPropagation(); setAudioContactId(c.id); }}
                         >
-                          <Mic className="h-4 w-4 text-primary" />
+                          <Mic className="h-4.5 w-4.5 text-primary" />
                         </button>
-                        <button className="p-1.5 rounded-md hover:bg-muted transition-colors" onClick={(e) => { e.stopPropagation(); navigate(`/contactos/${c.id}`); }}>
-                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        <button
+                          className="h-9 w-9 rounded-full border border-border bg-muted/30 hover:bg-muted flex items-center justify-center transition-colors"
+                          onClick={(e) => { e.stopPropagation(); navigate(`/contactos/${c.id}`); }}
+                        >
+                          <Eye className="h-4.5 w-4.5 text-muted-foreground" />
                         </button>
                       </div>
                     </TableCell>
