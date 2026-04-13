@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ArrowLeft, Phone, Mail, MapPin, Calendar, FileText, Edit, Plus, Loader2, Tag, Briefcase, Stethoscope } from "lucide-react";
 import { PatientNotesSection } from "@/components/patient/PatientNotesSection";
+import { VoiceEditSection } from "@/components/patient/VoiceEditSection";
+import { SessionNotesSection } from "@/components/patient/SessionNotesSection";
 import { useNavigate, useParams } from "react-router-dom";
 import { useContact, useContactAppointments, useContactDocuments, useContactInteractions, useContactPacks, useContactCategories, useUpdateContact } from "@/hooks/useContacts";
 import { useContactBusinesses } from "@/hooks/useBusinesses";
