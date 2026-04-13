@@ -265,7 +265,9 @@ export default function ContactDetailPage() {
         </TabsContent>
 
         <TabsContent value="info">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="space-y-4">
+            <VoiceEditSection entityType="contact" entityId={contact.id} />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="stat-card lg:col-span-2">
               <h3 className="text-sm font-semibold font-heading text-foreground mb-4">Datos personales</h3>
               <div className="grid grid-cols-2 gap-4">
