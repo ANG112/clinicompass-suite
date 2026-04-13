@@ -312,6 +312,7 @@ export default function ContactDetailPage() {
                 />
               </div>
             </div>
+            </div>
           </div>
         </TabsContent>
 
