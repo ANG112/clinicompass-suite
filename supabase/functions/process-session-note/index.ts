@@ -31,7 +31,7 @@ serve(async (req) => {
       .eq("user_id", user.id)
       .single();
 
-    const { content, entity_type, entity_id, source, transcription } = await req.json();
+    const { content, entity_type, entity_id, source, transcription, audio_file_path } = await req.json();
     if (!content || !entity_type || !entity_id) {
       throw new Error("Missing content, entity_type, or entity_id");
     }
@@ -42,6 +42,7 @@ serve(async (req) => {
       source: source || "manual",
       created_by: staffProfile?.id || null,
       transcription: transcription || null,
+      audio_file_path: audio_file_path || null,
     };
     if (entity_type === "patient") noteInsert.patient_id = entity_id;
     else noteInsert.contact_id = entity_id;
