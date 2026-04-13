@@ -33,7 +33,7 @@ serve(async (req) => {
       .eq("user_id", user.id)
       .single();
 
-    const { transcription, entity_type, entity_id } = await req.json();
+    const { transcription, entity_type, entity_id, audio_file_path } = await req.json();
     if (!transcription || !entity_type || !entity_id) {
       throw new Error("Missing transcription, entity_type, or entity_id");
     }
@@ -192,6 +192,7 @@ Reglas:
       transcription,
       interpreted_instruction: interpretation,
       fields_changed: fieldsChanged,
+      audio_file_path: audio_file_path || null,
     });
 
     return new Response(JSON.stringify({
