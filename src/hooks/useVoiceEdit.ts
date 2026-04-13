@@ -5,9 +5,9 @@ export function useVoiceEdit(entityType: "patient" | "contact", entityId: string
   const qc = useQueryClient();
 
   const editMutation = useMutation({
-    mutationFn: async (transcription: string) => {
+    mutationFn: async (params: { transcription: string; audioFilePath?: string | null }) => {
       const { data, error } = await supabase.functions.invoke("process-voice-edit", {
-        body: { transcription, entity_type: entityType, entity_id: entityId },
+        body: { transcription: params.transcription, entity_type: entityType, entity_id: entityId, audio_file_path: params.audioFilePath || null },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -20,9 +20,9 @@ export function useVoiceEdit(entityType: "patient" | "contact", entityId: string
   });
 
   const sessionMutation = useMutation({
-    mutationFn: async (params: { content: string; source: "manual" | "voice"; transcription?: string }) => {
+    mutationFn: async (params: { content: string; source: "manual" | "voice"; transcription?: string; audioFilePath?: string | null }) => {
       const { data, error } = await supabase.functions.invoke("process-session-note", {
-        body: { ...params, entity_type: entityType, entity_id: entityId },
+        body: { content: params.content, source: params.source, transcription: params.transcription, audio_file_path: params.audioFilePath || null, entity_type: entityType, entity_id: entityId },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
