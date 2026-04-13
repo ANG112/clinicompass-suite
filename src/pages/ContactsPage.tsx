@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { PatientNotesSection } from "@/components/patient/PatientNotesSection";
+import { SessionNotesSection } from "@/components/patient/SessionNotesSection";
 const categoryVariant: Record<string, "info" | "success" | "primary"> = {
   lead: "info",
   cliente: "success",
@@ -246,12 +247,17 @@ export default function ContactsPage({ filterCategory }: { filterCategory?: stri
 
       {/* Audio recording dialog */}
       <Dialog open={!!audioContactId} onOpenChange={(open) => { if (!open) setAudioContactId(null); }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-heading">Nota de voz</DialogTitle>
-            <DialogDescription>Graba una nota de voz para este contacto</DialogDescription>
+            <DialogDescription>Graba una nota de voz o añade una sesión para este contacto</DialogDescription>
           </DialogHeader>
-          {audioContactId && <PatientNotesSection contactId={audioContactId} />}
+          {audioContactId && (
+            <div className="space-y-4">
+              <PatientNotesSection contactId={audioContactId} />
+              <SessionNotesSection entityType="contact" entityId={audioContactId} />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </AppLayout>
