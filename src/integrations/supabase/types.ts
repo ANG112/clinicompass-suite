@@ -1204,6 +1204,153 @@ export type Database = {
           },
         ]
       }
+      patient_session_notes: {
+        Row: {
+          audio_file_path: string | null
+          contact_id: string | null
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          patient_id: string | null
+          source: string
+          transcription: string | null
+        }
+        Insert: {
+          audio_file_path?: string | null
+          contact_id?: string | null
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          patient_id?: string | null
+          source?: string
+          transcription?: string | null
+        }
+        Update: {
+          audio_file_path?: string | null
+          contact_id?: string | null
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          patient_id?: string | null
+          source?: string
+          transcription?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_session_notes_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_session_notes_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_synopsis: {
+        Row: {
+          contact_id: string | null
+          content: string
+          created_at: string
+          id: string
+          patient_id: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          contact_id?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          patient_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          contact_id?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          patient_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_synopsis_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: true
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_synopsis_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: true
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_voice_edits: {
+        Row: {
+          audio_file_path: string | null
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          fields_changed: Json
+          id: string
+          interpreted_instruction: string | null
+          patient_id: string | null
+          transcription: string | null
+        }
+        Insert: {
+          audio_file_path?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          fields_changed?: Json
+          id?: string
+          interpreted_instruction?: string | null
+          patient_id?: string | null
+          transcription?: string | null
+        }
+        Update: {
+          audio_file_path?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          fields_changed?: Json
+          id?: string
+          interpreted_instruction?: string | null
+          patient_id?: string | null
+          transcription?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_voice_edits_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_voice_edits_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
           address: string | null
