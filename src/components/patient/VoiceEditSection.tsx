@@ -161,31 +161,29 @@ export function VoiceEditSection({ entityType, entityId }: Props) {
 
 function AudioPlayer({ filePath }: { filePath: string }) {
   const [playing, setPlaying] = useState(false);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const audioRef = useState<HTMLAudioElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const handlePlay = async () => {
-    if (playing && audioRef[0]) {
-      audioRef[0].pause();
+    if (playing && audioRef.current) {
+      audioRef.current.pause();
       setPlaying(false);
       return;
     }
 
-    if (!audioUrl) {
+    if (!audioRef.current) {
       const { supabase } = await import("@/integrations/supabase/client");
       const { data } = await supabase.storage
         .from("patient-audios")
         .createSignedUrl(filePath, 3600);
       if (data?.signedUrl) {
-        setAudioUrl(data.signedUrl);
         const audio = new Audio(data.signedUrl);
         audio.onended = () => setPlaying(false);
-        audioRef[0] = audio;
+        audioRef.current = audio;
         audio.play();
         setPlaying(true);
       }
-    } else if (audioRef[0]) {
-      audioRef[0].play();
+    } else {
+      audioRef.current.play();
       setPlaying(true);
     }
   };
