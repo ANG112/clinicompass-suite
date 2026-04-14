@@ -255,6 +255,7 @@ export default function ContactsPage({ filterCategory }: { filterCategory?: stri
           </DialogHeader>
           {audioContactId && (
             <div className="space-y-4">
+              <VoiceEditSection entityType="contact" entityId={audioContactId} />
               <PatientNotesSection contactId={audioContactId} />
               <SessionNotesSection entityType="contact" entityId={audioContactId} />
             </div>
