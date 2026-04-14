@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ArrowLeft, Phone, Mail, MapPin, Calendar, FileText, Edit, Plus, Loader2, Tag, Briefcase, Stethoscope } from "lucide-react";
 import { PatientNotesSection } from "@/components/patient/PatientNotesSection";
-import { VoiceEditSection } from "@/components/patient/VoiceEditSection";
+import { UnifiedVoiceButton } from "@/components/patient/UnifiedVoiceButton";
 import { SessionNotesSection } from "@/components/patient/SessionNotesSection";
 import { useNavigate, useParams } from "react-router-dom";
 import { useContact, useContactAppointments, useContactDocuments, useContactInteractions, useContactPacks, useContactCategories, useUpdateContact } from "@/hooks/useContacts";
@@ -266,7 +266,7 @@ export default function ContactDetailPage() {
 
         <TabsContent value="info">
           <div className="space-y-4">
-            <VoiceEditSection entityType="contact" entityId={contact.id} />
+            <UnifiedVoiceButton entityType="contact" entityId={contact.id} />
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="stat-card lg:col-span-2">
               <h3 className="text-sm font-semibold font-heading text-foreground mb-4">Datos personales</h3>
