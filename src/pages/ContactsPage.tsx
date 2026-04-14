@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { PatientNotesSection } from "@/components/patient/PatientNotesSection";
 import { SessionNotesSection } from "@/components/patient/SessionNotesSection";
+import { VoiceEditSection } from "@/components/patient/VoiceEditSection";
 const categoryVariant: Record<string, "info" | "success" | "primary"> = {
   lead: "info",
   cliente: "success",
