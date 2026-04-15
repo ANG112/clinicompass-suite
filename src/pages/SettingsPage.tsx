@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import { Settings, Users, Tag, Shield, Receipt, Plus, Loader2, Pencil, MapPin, Trash2 } from "lucide-react";
+import { Settings, Users, Tag, Shield, Receipt, Plus, Loader2, Pencil, MapPin, Trash2, Sparkles } from "lucide-react";
 import { useInvoiceSeries, useCreateInvoiceSeries } from "@/hooks/useBilling";
 import { useAllServices, useCreateService, useUpdateService, useDeleteService } from "@/hooks/useServicesAdmin";
 import { useCenters } from "@/hooks/useCenters";
