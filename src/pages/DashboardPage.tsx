@@ -3,69 +3,15 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
-  UserPlus,
-  Users,
-  CalendarDays,
-  TrendingUp,
-  AlertCircle,
-  Receipt,
-  Activity,
-  ArrowUpRight,
+  UserPlus, Users, CalendarDays, TrendingUp,
+  AlertCircle, Receipt, Activity, ArrowUpRight, Loader2,
 } from "lucide-react";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
 } from "recharts";
-
-const monthlyData = [
-  { month: "Ene", fisio: 45, nutri: 28, psico: 35 },
-  { month: "Feb", fisio: 52, nutri: 32, psico: 30 },
-  { month: "Mar", fisio: 48, nutri: 35, psico: 42 },
-  { month: "Abr", fisio: 61, nutri: 40, psico: 38 },
-  { month: "May", fisio: 55, nutri: 38, psico: 45 },
-  { month: "Jun", fisio: 67, nutri: 42, psico: 40 },
-];
-
-const pieData = [
-  { name: "Fisioterapia", value: 45, color: "hsl(211, 70%, 45%)" },
-  { name: "Nutrición", value: 28, color: "hsl(175, 55%, 40%)" },
-  { name: "Psicotécnicos", value: 27, color: "hsl(38, 92%, 50%)" },
-];
-
-const conversionData = [
-  { week: "S1", rate: 32 },
-  { week: "S2", rate: 38 },
-  { week: "S3", rate: 35 },
-  { week: "S4", rate: 42 },
-  { week: "S5", rate: 40 },
-  { week: "S6", rate: 45 },
-];
-
-const todayAppointments = [
-  { time: "09:00", patient: "María García", service: "Fisioterapia", center: "Madrid Norte", status: "confirmada" as const },
-  { time: "09:30", patient: "Carlos López", service: "Psicotécnico", center: "Madrid Sur", status: "pendiente" as const },
-  { time: "10:00", patient: "Ana Martínez", service: "Nutrición", center: "Madrid Norte", status: "confirmada" as const },
-  { time: "10:30", patient: "Pedro Ruiz", service: "Fisioterapia", center: "Barcelona", status: "confirmada" as const },
-  { time: "11:00", patient: "Laura Sánchez", service: "Psicotécnico", center: "Valencia", status: "pendiente" as const },
-  { time: "11:30", patient: "Diego Torres", service: "Fisioterapia", center: "Madrid Norte", status: "confirmada" as const },
-];
-
-const recentLeads = [
-  { name: "Roberto Fernández", service: "Fisioterapia", source: "Web", time: "Hace 2h" },
-  { name: "Isabel Moreno", service: "Nutrición", source: "Teléfono", time: "Hace 3h" },
-  { name: "Empresa ACME S.L.", service: "Psicotécnicos", source: "Comercial", time: "Hace 5h" },
-  { name: "Teresa Vidal", service: "Fisioterapia", source: "Referido", time: "Ayer" },
-];
+import { useDashboardData } from "@/hooks/useDashboardData";
+import { format, formatDistanceToNow, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 
 const statusMap: Record<string, "success" | "warning" | "info"> = {
   confirmada: "success",
@@ -74,154 +20,55 @@ const statusMap: Record<string, "success" | "warning" | "info"> = {
 };
 
 export default function DashboardPage() {
+  const { data, isLoading } = useDashboardData();
+
+  if (isLoading || !data) {
+    return (
+      <AppLayout>
+        <PageHeader title="Dashboard" description="Resumen general de actividad y métricas" />
+        <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+      </AppLayout>
+    );
+  }
+
+  const fmtChange = (val: number, suffix = "vs mes anterior") =>
+    `${val >= 0 ? "+" : ""}${val}% ${suffix}`;
+
   return (
     <AppLayout>
-      <PageHeader
-        title="Dashboard"
-        description="Resumen general de actividad y métricas"
-      />
+      <PageHeader title="Dashboard" description="Resumen general de actividad y métricas" />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 animate-slide-in">
-        <StatCard
-          title="Leads nuevos"
-          value={24}
-          change="+12% vs mes anterior"
-          changeType="positive"
-          icon={UserPlus}
-          iconColor="text-primary"
-        />
-        <StatCard
-          title="Pacientes activos"
-          value={342}
-          change="+5% vs mes anterior"
-          changeType="positive"
-          icon={Users}
-          iconColor="text-accent"
-        />
-        <StatCard
-          title="Citas hoy"
-          value={18}
-          change="3 pendientes de confirmar"
-          changeType="neutral"
-          icon={CalendarDays}
-          iconColor="text-warning"
-        />
-        <StatCard
-          title="Facturación prevista"
-          value="€12.450"
-          change="+8% vs mes anterior"
-          changeType="positive"
-          icon={Receipt}
-          iconColor="text-success"
-        />
+        <StatCard title="Leads nuevos" value={data.leadsNew}
+          change={fmtChange(data.leadsChange)} changeType={data.leadsChange >= 0 ? "positive" : "negative"}
+          icon={UserPlus} iconColor="text-primary" />
+        <StatCard title="Pacientes activos" value={data.activePatients}
+          change={fmtChange(data.patientsChange)} changeType={data.patientsChange >= 0 ? "positive" : "negative"}
+          icon={Users} iconColor="text-accent" />
+        <StatCard title="Citas hoy" value={data.todayAppts.length}
+          change={`${data.pendingToday} pendientes de confirmar`} changeType="neutral"
+          icon={CalendarDays} iconColor="text-warning" />
+        <StatCard title="Facturación mes" value={`€${data.invoiceTotal.toLocaleString("es-ES")}`}
+          change={fmtChange(data.invoiceChange)} changeType={data.invoiceChange >= 0 ? "positive" : "negative"}
+          icon={Receipt} iconColor="text-success" />
       </div>
 
-      {/* Second row KPIs */}
+      {/* Second row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard
-          title="Conversión"
-          value="42%"
-          change="+3pp vs mes anterior"
-          changeType="positive"
-          icon={TrendingUp}
-          iconColor="text-primary"
-        />
-        <StatCard
-          title="No shows"
-          value={7}
-          change="-2 vs semana anterior"
-          changeType="positive"
-          icon={AlertCircle}
-          iconColor="text-warning"
-        />
-        <StatCard
-          title="Bonos activos"
-          value={56}
-          change="12 próximos a vencer"
-          changeType="neutral"
-          icon={Activity}
-          iconColor="text-accent"
-        />
-        <StatCard
-          title="Sesiones realizadas"
-          value={128}
-          change="Esta semana"
-          changeType="neutral"
-          icon={ArrowUpRight}
-          iconColor="text-success"
-        />
-      </div>
-
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        {/* Bar Chart */}
-        <div className="stat-card lg:col-span-2">
-          <h3 className="text-sm font-semibold font-heading text-foreground mb-4">
-            Citas por línea de negocio
-          </h3>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
-              <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "8px",
-                  fontSize: "12px",
-                }}
-              />
-              <Bar dataKey="fisio" name="Fisioterapia" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="nutri" name="Nutrición" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="psico" name="Psicotécnicos" fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Pie Chart */}
-        <div className="stat-card">
-          <h3 className="text-sm font-semibold font-heading text-foreground mb-4">
-            Distribución por servicio
-          </h3>
-          <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-              <Pie
-                data={pieData}
-                cx="50%"
-                cy="50%"
-                innerRadius={55}
-                outerRadius={80}
-                dataKey="value"
-                stroke="none"
-              >
-                {pieData.map((entry, i) => (
-                  <Cell key={i} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "8px",
-                  fontSize: "12px",
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="space-y-2 mt-2">
-            {pieData.map((d) => (
-              <div key={d.name} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: d.color }} />
-                  <span className="text-muted-foreground">{d.name}</span>
-                </div>
-                <span className="font-semibold text-foreground">{d.value}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        <StatCard title="Conversión" value={`${data.conversionRate}%`}
+          change="Leads convertidos este mes" changeType="neutral"
+          icon={TrendingUp} iconColor="text-primary" />
+        <StatCard title="No shows" value={data.noShows}
+          change={`${data.noShowsDiff >= 0 ? "-" : "+"}${Math.abs(data.noShowsDiff)} vs semana anterior`}
+          changeType={data.noShowsDiff >= 0 ? "positive" : "negative"}
+          icon={AlertCircle} iconColor="text-warning" />
+        <StatCard title="Bonos activos" value={data.activePacks}
+          change={`${data.packsExpiringSoon} próximos a vencer`} changeType="neutral"
+          icon={Activity} iconColor="text-accent" />
+        <StatCard title="Sesiones realizadas" value={data.sessionsWeek}
+          change="Esta semana" changeType="neutral"
+          icon={ArrowUpRight} iconColor="text-success" />
       </div>
 
       {/* Bottom Row */}
@@ -229,82 +76,90 @@ export default function DashboardPage() {
         {/* Today's Appointments */}
         <div className="stat-card lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold font-heading text-foreground">
-              Citas de hoy
-            </h3>
-            <span className="text-xs text-muted-foreground">{todayAppointments.length} citas</span>
+            <h3 className="text-sm font-semibold font-heading text-foreground">Citas de hoy</h3>
+            <span className="text-xs text-muted-foreground">{data.todayAppts.length} citas</span>
           </div>
-          <div className="space-y-2">
-            {todayAppointments.map((apt, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-4 p-2.5 rounded-lg table-row-hover"
-              >
-                <span className="text-sm font-mono font-medium text-primary w-12">
-                  {apt.time}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {apt.patient}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {apt.service} · {apt.center}
-                  </p>
-                </div>
-                <StatusBadge variant={statusMap[apt.status]}>
-                  {apt.status}
-                </StatusBadge>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Recent Leads + Conversion Chart */}
-        <div className="space-y-4">
-          <div className="stat-card">
-            <h3 className="text-sm font-semibold font-heading text-foreground mb-3">
-              Tasa de conversión
-            </h3>
-            <ResponsiveContainer width="100%" height={100}>
-              <LineChart data={conversionData}>
-                <Line
-                  type="monotone"
-                  dataKey="rate"
-                  stroke="hsl(var(--chart-2))"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                    fontSize: "12px",
-                  }}
-                  formatter={(v: number) => [`${v}%`, "Conversión"]}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="stat-card">
-            <h3 className="text-sm font-semibold font-heading text-foreground mb-3">
-              Últimos leads
-            </h3>
-            <div className="space-y-2.5">
-              {recentLeads.map((lead, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
-                    {lead.name.split(" ").map(w => w[0]).join("").slice(0, 2)}
-                  </div>
+          {data.todayAppts.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">No hay citas hoy</p>
+          ) : (
+            <div className="space-y-2">
+              {data.todayAppts.map((apt: any) => (
+                <div key={apt.id} className="flex items-center gap-4 p-2.5 rounded-lg table-row-hover">
+                  <span className="text-sm font-mono font-medium text-primary w-12">
+                    {format(parseISO(apt.start_time), "HH:mm")}
+                  </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-foreground truncate">{lead.name}</p>
-                    <p className="text-[10px] text-muted-foreground">{lead.service} · {lead.source}</p>
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {apt.patient?.first_name} {apt.patient?.last_name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {apt.service?.name ?? "—"} · {apt.center?.name ?? "—"}
+                    </p>
                   </div>
-                  <span className="text-[10px] text-muted-foreground">{lead.time}</span>
+                  <StatusBadge variant={statusMap[apt.status] ?? "info"}>
+                    {apt.status}
+                  </StatusBadge>
                 </div>
               ))}
             </div>
+          )}
+        </div>
+
+        {/* Right column */}
+        <div className="space-y-4">
+          {/* Pie chart */}
+          <div className="stat-card">
+            <h3 className="text-sm font-semibold font-heading text-foreground mb-4">Distribución por servicio</h3>
+            {data.pieData.every((d: any) => d.value === 0) ? (
+              <p className="text-sm text-muted-foreground text-center py-6">Sin datos este mes</p>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={160}>
+                  <PieChart>
+                    <Pie data={data.pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={65} dataKey="value" stroke="none">
+                      {data.pieData.map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
+                    </Pie>
+                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="space-y-2 mt-2">
+                  {data.pieData.map((d: any) => (
+                    <div key={d.name} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: d.color }} />
+                        <span className="text-muted-foreground">{d.name}</span>
+                      </div>
+                      <span className="font-semibold text-foreground">{d.value}%</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Recent leads */}
+          <div className="stat-card">
+            <h3 className="text-sm font-semibold font-heading text-foreground mb-3">Últimos leads</h3>
+            {data.recentLeads.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Sin leads recientes</p>
+            ) : (
+              <div className="space-y-2.5">
+                {data.recentLeads.map((lead: any, i: number) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
+                      {lead.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-foreground truncate">{lead.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{lead.service} · {lead.source}</p>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">
+                      {formatDistanceToNow(parseISO(lead.time), { addSuffix: true, locale: es })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
