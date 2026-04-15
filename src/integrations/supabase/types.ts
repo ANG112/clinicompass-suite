@@ -392,6 +392,110 @@ export type Database = {
           },
         ]
       }
+      campaign_contacts: {
+        Row: {
+          campaign_id: string
+          contact_id: string
+          contacted_at: string | null
+          converted_at: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          status: Database["public"]["Enums"]["campaign_contact_status"]
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          contact_id: string
+          contacted_at?: string | null
+          converted_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["campaign_contact_status"]
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          contact_id?: string
+          contacted_at?: string | null
+          converted_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["campaign_contact_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_contacts_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_contacts_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          business_line: Database["public"]["Enums"]["business_line"]
+          center_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          name: string
+          start_date: string | null
+          status: Database["public"]["Enums"]["campaign_status"]
+          target_count: number
+          updated_at: string
+        }
+        Insert: {
+          business_line: Database["public"]["Enums"]["business_line"]
+          center_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["campaign_status"]
+          target_count?: number
+          updated_at?: string
+        }
+        Update: {
+          business_line?: Database["public"]["Enums"]["business_line"]
+          center_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["campaign_status"]
+          target_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       centers: {
         Row: {
           active: boolean
@@ -1958,6 +2062,13 @@ export type Database = {
         | "no_presentado"
         | "reprogramada"
       business_line: "fisioterapia" | "nutricion" | "psicotecnicos"
+      campaign_contact_status:
+        | "pendiente"
+        | "contactado"
+        | "interesado"
+        | "convertido"
+        | "descartado"
+      campaign_status: "planificada" | "activa" | "finalizada" | "cancelada"
       document_status: "pendiente" | "no_subido" | "subido" | "validado"
       interaction_type:
         | "llamada"
@@ -2128,6 +2239,14 @@ export const Constants = {
         "reprogramada",
       ],
       business_line: ["fisioterapia", "nutricion", "psicotecnicos"],
+      campaign_contact_status: [
+        "pendiente",
+        "contactado",
+        "interesado",
+        "convertido",
+        "descartado",
+      ],
+      campaign_status: ["planificada", "activa", "finalizada", "cancelada"],
       document_status: ["pendiente", "no_subido", "subido", "validado"],
       interaction_type: [
         "llamada",
