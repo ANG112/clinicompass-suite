@@ -1841,6 +1841,36 @@ export type Database = {
         }
         Relationships: []
       }
+      specialties: {
+        Row: {
+          active: boolean
+          created_at: string
+          icon_name: string
+          id: string
+          name: string
+          position: number
+          slug: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          icon_name?: string
+          id?: string
+          name: string
+          position?: number
+          slug: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          icon_name?: string
+          id?: string
+          name?: string
+          position?: number
+          slug?: string
+        }
+        Relationships: []
+      }
       staff_center_services: {
         Row: {
           center_id: string

@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import { Settings, Users, Tag, Shield, Receipt, Plus, Loader2, Pencil, MapPin, Trash2 } from "lucide-react";
+import { Settings, Users, Tag, Shield, Receipt, Plus, Loader2, Pencil, MapPin, Trash2, Sparkles } from "lucide-react";
 import { useInvoiceSeries, useCreateInvoiceSeries } from "@/hooks/useBilling";
 import { useAllServices, useCreateService, useUpdateService, useDeleteService } from "@/hooks/useServicesAdmin";
 import { useCenters } from "@/hooks/useCenters";
@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Constants } from "@/integrations/supabase/types";
+import { useAllSpecialties, useCreateSpecialty, useUpdateSpecialty, useDeleteSpecialty } from "@/hooks/useSpecialties";
 
 const ALL_ROLES = Constants.public.Enums.app_role;
 const ROLE_LABELS: Record<string, string> = {
@@ -66,6 +67,45 @@ export default function SettingsPage() {
   });
 
   const resetSvcForm = () => setSvcForm({ name: "", business_line: "fisioterapia", duration_minutes: "60", price: "0", active: true });
+
+  // Specialties state
+  const { data: allSpecialties, isLoading: specialtiesLoading } = useAllSpecialties();
+  const createSpecialty = useCreateSpecialty();
+  const updateSpecialtyMut = useUpdateSpecialty();
+  const deleteSpecialtyMut = useDeleteSpecialty();
+  const [openSpecialty, setOpenSpecialty] = useState(false);
+  const [editingSpecialty, setEditingSpecialty] = useState<any>(null);
+  const [deleteSpecialtyTarget, setDeleteSpecialtyTarget] = useState<any>(null);
+  const [specForm, setSpecForm] = useState({ name: "", slug: "", icon_name: "Activity" });
+
+  const ICON_OPTIONS = ["Activity", "Apple", "Brain", "Heart", "Zap", "Dumbbell", "Leaf", "Eye", "Stethoscope"];
+
+  const handleSaveSpecialty = async () => {
+    if (!specForm.name) { toast.error("El nombre es obligatorio"); return; }
+    const slug = specForm.slug || specForm.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/-+$/,"");
+    try {
+      if (editingSpecialty) {
+        await updateSpecialtyMut.mutateAsync({ id: editingSpecialty.id, name: specForm.name, slug, icon_name: specForm.icon_name });
+        toast.success("Especialidad actualizada");
+      } else {
+        await createSpecialty.mutateAsync({ name: specForm.name, slug, icon_name: specForm.icon_name });
+        toast.success("Especialidad creada");
+      }
+      setOpenSpecialty(false);
+      setEditingSpecialty(null);
+      setSpecForm({ name: "", slug: "", icon_name: "Activity" });
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const handleDeleteSpecialty = async () => {
+    if (!deleteSpecialtyTarget) return;
+    try {
+      await deleteSpecialtyMut.mutateAsync(deleteSpecialtyTarget.id);
+      toast.success("Especialidad eliminada");
+    } catch (e: any) { toast.error(e.message); }
+    setDeleteSpecialtyTarget(null);
+  };
+
 
   const handleSaveService = async () => {
     if (!svcForm.name) { toast.error("El nombre del servicio es obligatorio"); return; }
@@ -326,6 +366,7 @@ export default function SettingsPage() {
         <TabsList className="flex-wrap">
           <TabsTrigger value="general" className="gap-1"><Settings className="h-3.5 w-3.5" /> General</TabsTrigger>
           <TabsTrigger value="roles" className="gap-1"><Shield className="h-3.5 w-3.5" /> Roles</TabsTrigger>
+          <TabsTrigger value="specialties" className="gap-1"><Sparkles className="h-3.5 w-3.5" /> Especialidades</TabsTrigger>
           <TabsTrigger value="services" className="gap-1"><Tag className="h-3.5 w-3.5" /> Servicios</TabsTrigger>
           <TabsTrigger value="assignments" className="gap-1"><MapPin className="h-3.5 w-3.5" /> Asignaciones</TabsTrigger>
           <TabsTrigger value="billing" className="gap-1"><Receipt className="h-3.5 w-3.5" /> Series facturación</TabsTrigger>
@@ -395,6 +436,119 @@ export default function SettingsPage() {
           </div>
         </TabsContent>
 
+        <TabsContent value="specialties">
+          <div className="stat-card max-w-4xl">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-sm font-semibold font-heading text-foreground">Especialidades</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Las especialidades aparecen como secciones en el menú lateral. Cada una agrupa sus servicios, citas y bonos.</p>
+              </div>
+              {isGerencia && (
+                <Button size="sm" onClick={() => { setSpecForm({ name: "", slug: "", icon_name: "Activity" }); setEditingSpecialty(null); setOpenSpecialty(true); }}>
+                  <Plus className="h-4 w-4 mr-1" />Nueva especialidad
+                </Button>
+              )}
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="font-semibold">Nombre</TableHead>
+                  <TableHead className="font-semibold">Slug</TableHead>
+                  <TableHead className="font-semibold">Icono</TableHead>
+                  <TableHead className="font-semibold text-center">Activa</TableHead>
+                  <TableHead className="font-semibold">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {specialtiesLoading ? (
+                  <TableRow><TableCell colSpan={5} className="text-center py-4 text-muted-foreground">Cargando...</TableCell></TableRow>
+                ) : !allSpecialties?.length ? (
+                  <TableRow><TableCell colSpan={5} className="text-center py-4 text-muted-foreground">Sin especialidades</TableCell></TableRow>
+                ) : allSpecialties.map((spec: any) => (
+                  <TableRow key={spec.id} className={!spec.active ? "opacity-50" : ""}>
+                    <TableCell className="text-sm font-medium">{spec.name}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground font-mono">{spec.slug}</TableCell>
+                    <TableCell className="text-sm">{spec.icon_name}</TableCell>
+                    <TableCell className="text-center">
+                      <Switch checked={spec.active} onCheckedChange={async () => {
+                        try {
+                          await updateSpecialtyMut.mutateAsync({ id: spec.id, active: !spec.active });
+                          toast.success(spec.active ? "Especialidad desactivada" : "Especialidad activada");
+                        } catch (e: any) { toast.error(e.message); }
+                      }} />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => {
+                          setEditingSpecialty(spec);
+                          setSpecForm({ name: spec.name, slug: spec.slug, icon_name: spec.icon_name });
+                          setOpenSpecialty(true);
+                        }}>
+                          <Pencil className="h-3 w-3" /> Editar
+                        </Button>
+                        {isGerencia && (
+                          <button className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors" onClick={() => setDeleteSpecialtyTarget(spec)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <Dialog open={openSpecialty} onOpenChange={setOpenSpecialty}>
+            <DialogContent className="max-w-md">
+              <DialogHeader><DialogTitle>{editingSpecialty ? "Editar especialidad" : "Nueva especialidad"}</DialogTitle></DialogHeader>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Nombre *</Label>
+                  <Input className="h-9" value={specForm.name} onChange={e => setSpecForm({ ...specForm, name: e.target.value })} placeholder="Ej: Acupuntura" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Slug (URL)</Label>
+                  <Input className="h-9" value={specForm.slug} onChange={e => setSpecForm({ ...specForm, slug: e.target.value })} placeholder="Se genera automáticamente" />
+                  <p className="text-[10px] text-muted-foreground">Déjalo vacío para generarlo a partir del nombre</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Icono</Label>
+                  <Select value={specForm.icon_name} onValueChange={v => setSpecForm({ ...specForm, icon_name: v })}>
+                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {ICON_OPTIONS.map(icon => (
+                        <SelectItem key={icon} value={icon}>{icon}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-2">
+                <Button variant="outline" onClick={() => setOpenSpecialty(false)}>Cancelar</Button>
+                <Button onClick={handleSaveSpecialty} disabled={createSpecialty.isPending || updateSpecialtyMut.isPending}>
+                  {editingSpecialty ? "Guardar cambios" : "Crear especialidad"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <AlertDialog open={!!deleteSpecialtyTarget} onOpenChange={(open) => { if (!open) setDeleteSpecialtyTarget(null); }}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Eliminar especialidad?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Se eliminará la especialidad <strong>"{deleteSpecialtyTarget?.name}"</strong>. Los servicios asociados no se eliminarán.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteSpecialty} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Eliminar</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </TabsContent>
+
         <TabsContent value="services">
           <div className="stat-card max-w-4xl">
             <div className="flex items-center justify-between mb-4">
@@ -426,7 +580,7 @@ export default function SettingsPage() {
                     <TableCell className="text-sm font-medium">{svc.name}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-[10px]">
-                        {svc.business_line === "fisioterapia" ? "Fisioterapia" : svc.business_line === "nutricion" ? "Nutrición" : "Psicotécnicos"}
+                        {allSpecialties?.find((sp: any) => sp.slug === svc.business_line)?.name || svc.business_line}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm">{svc.duration_minutes} min</TableCell>
@@ -465,9 +619,9 @@ export default function SettingsPage() {
                   <Select value={svcForm.business_line} onValueChange={v => setSvcForm({ ...svcForm, business_line: v })}>
                     <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="fisioterapia">Fisioterapia</SelectItem>
-                      <SelectItem value="nutricion">Nutrición</SelectItem>
-                      <SelectItem value="psicotecnicos">Psicotécnicos</SelectItem>
+                      {allSpecialties?.filter((sp: any) => sp.active).map((sp: any) => (
+                        <SelectItem key={sp.slug} value={sp.slug}>{sp.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

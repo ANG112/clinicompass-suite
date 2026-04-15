@@ -16,10 +16,18 @@ import {
   LogOut,
   Briefcase,
   Contact,
+  Stethoscope,
+  Heart,
+  Zap,
+  Dumbbell,
+  Leaf,
+  Eye,
+  type LucideIcon,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useSpecialties } from "@/hooks/useSpecialties";
 import {
   Sidebar,
   SidebarContent,
@@ -38,7 +46,10 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Stethoscope } from "lucide-react";
+
+const ICON_MAP: Record<string, LucideIcon> = {
+  Activity, Apple, Brain, Heart, Zap, Dumbbell, Leaf, Eye, Stethoscope,
+};
 
 const mainNav = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -50,12 +61,6 @@ const mainNav = [
   { title: "Centros", url: "/centros", icon: Building2 },
 ];
 
-const clinicalNav = [
-  { title: "Fisioterapia", url: "/fisioterapia", icon: Activity },
-  { title: "Nutrición", url: "/nutricion", icon: Apple },
-  { title: "Psicotécnicos", url: "/psicotecnicos", icon: Brain },
-];
-
 const managementNav = [
   { title: "Campañas", url: "/campanas", icon: Megaphone },
   { title: "Presupuestos", url: "/presupuestos", icon: FileText },
@@ -64,7 +69,9 @@ const managementNav = [
   { title: "Configuración", url: "/configuracion", icon: Settings },
 ];
 
-function NavGroup({ label, items, defaultOpen = true }: { label: string; items: typeof mainNav; defaultOpen?: boolean }) {
+type NavItem = { title: string; url: string; icon: LucideIcon };
+
+function NavGroup({ label, items, defaultOpen = true }: { label: string; items: NavItem[]; defaultOpen?: boolean }) {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
@@ -103,6 +110,13 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { profile, roles, signOut } = useAuth();
+  const { data: specialties } = useSpecialties();
+
+  const clinicalNav: NavItem[] = (specialties || []).map((s: any) => ({
+    title: s.name,
+    url: `/especialidad/${s.slug}`,
+    icon: ICON_MAP[s.icon_name] || Activity,
+  }));
 
   const initials = profile
     ? `${profile.first_name?.[0] || ""}${profile.last_name?.[0] || ""}`.toUpperCase()
@@ -128,7 +142,7 @@ export function AppSidebar() {
 
       <SidebarContent className="px-2">
         <NavGroup label="Principal" items={mainNav} />
-        <NavGroup label="Servicios disponibles" items={clinicalNav} />
+        <NavGroup label="Especialidades" items={clinicalNav} />
         <NavGroup label="Gestión" items={managementNav} />
       </SidebarContent>
 
