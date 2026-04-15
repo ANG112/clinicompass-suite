@@ -9,9 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Search, Phone, Mail, MessageSquare, Loader2, Users } from "lucide-react";
-import { useLeads, useCreateLead } from "@/hooks/useLeads";
+import { Plus, Search, Phone, Mail, MessageSquare, Loader2, Users, Trash2 } from "lucide-react";
+import { useLeads, useCreateLead, useDeleteLead } from "@/hooks/useLeads";
 import { useCreateInteraction } from "@/hooks/useInteractions";
 import { useCenters } from "@/hooks/useCenters";
 import { useCenterFilter } from "@/components/layout/CenterSelector";
@@ -49,6 +50,7 @@ export default function LeadsPage() {
   const [intLeadId, setIntLeadId] = useState<string | null>(null);
   const [intType, setIntType] = useState<string>("llamada");
   const [intNotes, setIntNotes] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const { selectedCenterId } = useCenterFilter();
   const { profile } = useAuth();
 
@@ -60,6 +62,7 @@ export default function LeadsPage() {
   });
   const { data: centers } = useCenters();
   const createLead = useCreateLead();
+  const deleteLead = useDeleteLead();
   const createInteraction = useCreateInteraction();
 
   const [form, setForm] = useState({
@@ -107,6 +110,15 @@ export default function LeadsPage() {
     } catch (err: any) {
       toast.error(err.message || "Error al registrar interacción");
     }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteLead.mutateAsync(deleteTarget.id);
+      toast.success("Lead eliminado");
+    } catch (e: any) { toast.error(e.message); }
+    setDeleteTarget(null);
   };
 
   return (
@@ -235,7 +247,7 @@ export default function LeadsPage() {
                 <TableHead className="font-semibold">Centro</TableHead>
                 <TableHead className="font-semibold">Valor</TableHead>
                 <TableHead className="font-semibold">Fecha</TableHead>
-                <TableHead className="w-[100px]">Acciones</TableHead>
+                <TableHead className="w-[120px]">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -266,10 +278,7 @@ export default function LeadsPage() {
                       <div className="flex gap-1">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <button
-                              className="p-1.5 rounded-md hover:bg-muted transition-colors"
-                              onClick={() => openInteraction(l.id, "llamada")}
-                            >
+                            <button className="p-1.5 rounded-md hover:bg-muted transition-colors" onClick={() => openInteraction(l.id, "llamada")}>
                               <Phone className="h-3.5 w-3.5 text-muted-foreground" />
                             </button>
                           </TooltipTrigger>
@@ -277,10 +286,7 @@ export default function LeadsPage() {
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <button
-                              className="p-1.5 rounded-md hover:bg-muted transition-colors"
-                              onClick={() => openInteraction(l.id, "email")}
-                            >
+                            <button className="p-1.5 rounded-md hover:bg-muted transition-colors" onClick={() => openInteraction(l.id, "email")}>
                               <Mail className="h-3.5 w-3.5 text-muted-foreground" />
                             </button>
                           </TooltipTrigger>
@@ -288,15 +294,15 @@ export default function LeadsPage() {
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <button
-                              className="p-1.5 rounded-md hover:bg-muted transition-colors"
-                              onClick={() => openInteraction(l.id, "nota")}
-                            >
+                            <button className="p-1.5 rounded-md hover:bg-muted transition-colors" onClick={() => openInteraction(l.id, "nota")}>
                               <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>Añadir nota interna</TooltipContent>
                         </Tooltip>
+                        <button className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors" onClick={() => setDeleteTarget(l)}>
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -338,6 +344,22 @@ export default function LeadsPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar lead?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará el lead <strong>{deleteTarget?.first_name} {deleteTarget?.last_name || ""}</strong>. Sus datos se conservarán pero dejará de aparecer en las listas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Eliminar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }

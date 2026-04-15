@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useQuotes, useCreateQuote, useUpdateQuote, useSaveQuoteItems, useConvertQuoteToInvoice } from "@/hooks/useBilling";
+import { useQuotes, useCreateQuote, useUpdateQuote, useDeleteQuote, useSaveQuoteItems, useConvertQuoteToInvoice } from "@/hooks/useBilling";
 import { useContacts } from "@/hooks/useContacts";
 import { useCenters } from "@/hooks/useCenters";
 import { toast } from "sonner";
@@ -44,10 +45,12 @@ export default function QuotesPage() {
   const { data: centers } = useCenters();
   const createQuote = useCreateQuote();
   const updateQuote = useUpdateQuote();
+  const deleteQuote = useDeleteQuote();
   const saveItems = useSaveQuoteItems();
   const convertToInvoice = useConvertQuoteToInvoice();
 
   const [open, setOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [form, setForm] = useState({ contact_id: "", center_id: "", notes: "", status: "borrador" as string });
   const [lines, setLines] = useState<LineItem[]>([{ description: "", quantity: 1, unit_price: 0, tax_rate: 21 }]);
 
@@ -69,7 +72,6 @@ export default function QuotesPage() {
     if (lines.some(l => !l.description.trim())) { toast.error("Completa todos los conceptos"); return; }
     if (lines.some(l => l.quantity * l.unit_price === 0)) { toast.error("No se permiten líneas con importe 0 €"); return; }
 
-    // Get fiscal data from contact
     const contact = contacts?.find((c: any) => c.id === form.contact_id);
 
     try {
@@ -115,6 +117,15 @@ export default function QuotesPage() {
     } catch (e: any) {
       toast.error(e.message);
     }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteQuote.mutateAsync(deleteTarget.id);
+      toast.success("Presupuesto eliminado");
+    } catch (e: any) { toast.error(e.message); }
+    setDeleteTarget(null);
   };
 
   return (
@@ -180,6 +191,9 @@ export default function QuotesPage() {
                           <ArrowRight className="h-3.5 w-3.5 mr-1" />Facturar
                         </Button>
                       )}
+                      <button className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors" onClick={() => setDeleteTarget(q)}>
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -218,7 +232,6 @@ export default function QuotesPage() {
             </div>
           </div>
 
-          {/* Lines */}
           <div className="mt-4">
             <div className="flex items-center justify-between mb-2">
               <Label className="text-xs font-semibold">Líneas</Label>
@@ -251,7 +264,6 @@ export default function QuotesPage() {
             </div>
           </div>
 
-          {/* Totals */}
           <div className="flex justify-end mt-4">
             <div className="text-right space-y-1 text-sm">
               <p>Base imponible: <span className="font-semibold">€{subtotal.toFixed(2)}</span></p>
@@ -271,6 +283,22 @@ export default function QuotesPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar presupuesto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará permanentemente el presupuesto <strong>{deleteTarget?.quote_number || "sin número"}</strong>. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Eliminar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }

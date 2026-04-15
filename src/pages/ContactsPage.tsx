@@ -9,8 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Search, Loader2, Users, Eye, Mic } from "lucide-react";
-import { useContacts, useContactCategories, useCreateContact } from "@/hooks/useContacts";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Plus, Search, Loader2, Users, Eye, Mic, Trash2 } from "lucide-react";
+import { useContacts, useContactCategories, useCreateContact, useDeleteContact } from "@/hooks/useContacts";
 import { useCenters } from "@/hooks/useCenters";
 import { useCenterFilter } from "@/components/layout/CenterSelector";
 import { useNavigate } from "react-router-dom";
@@ -19,6 +20,7 @@ import { format } from "date-fns";
 import { PatientNotesSection } from "@/components/patient/PatientNotesSection";
 import { SessionNotesSection } from "@/components/patient/SessionNotesSection";
 import { UnifiedVoiceButton } from "@/components/patient/UnifiedVoiceButton";
+
 const categoryVariant: Record<string, "info" | "success" | "primary"> = {
   lead: "info",
   cliente: "success",
@@ -30,6 +32,7 @@ export default function ContactsPage({ filterCategory }: { filterCategory?: stri
   const [catFilter, setCatFilter] = useState(filterCategory || "all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [audioContactId, setAudioContactId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const navigate = useNavigate();
   const { selectedCenterId } = useCenterFilter();
 
@@ -41,6 +44,7 @@ export default function ContactsPage({ filterCategory }: { filterCategory?: stri
   const { data: categories } = useContactCategories();
   const { data: centers } = useCenters();
   const createContact = useCreateContact();
+  const deleteContact = useDeleteContact();
 
   const [form, setForm] = useState({
     first_name: "", last_name: "", email: "", phone: "", company_name: "",
@@ -70,6 +74,15 @@ export default function ContactsPage({ filterCategory }: { filterCategory?: stri
     } catch (err: any) {
       toast.error(err.message || "Error al crear contacto");
     }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteContact.mutateAsync(deleteTarget.id);
+      toast.success("Contacto eliminado");
+    } catch (e: any) { toast.error(e.message); }
+    setDeleteTarget(null);
   };
 
   const pageTitle = filterCategory === "lead" ? "Leads" : filterCategory === "cliente" ? "Clientes" : "Contactos";
@@ -120,7 +133,7 @@ export default function ContactsPage({ filterCategory }: { filterCategory?: stri
                 <TableHead className="font-semibold">Centro</TableHead>
                 <TableHead className="font-semibold">Origen</TableHead>
                 <TableHead className="font-semibold">Fecha</TableHead>
-                <TableHead className="w-[60px]"></TableHead>
+                <TableHead className="w-[100px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -147,19 +160,26 @@ export default function ContactsPage({ filterCategory }: { filterCategory?: stri
                     <TableCell className="text-sm text-muted-foreground">{c.source || "-"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{format(new Date(c.created_at), "dd/MM/yyyy")}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
                         <button
-                          className="h-9 w-9 rounded-full border border-primary/20 bg-primary/5 hover:bg-primary/15 flex items-center justify-center transition-colors"
+                          className="h-8 w-8 rounded-full border border-primary/20 bg-primary/5 hover:bg-primary/15 flex items-center justify-center transition-colors"
                           title="Grabar nota de voz"
                           onClick={(e) => { e.stopPropagation(); setAudioContactId(c.id); }}
                         >
-                          <Mic className="h-4.5 w-4.5 text-primary" />
+                          <Mic className="h-4 w-4 text-primary" />
                         </button>
                         <button
-                          className="h-9 w-9 rounded-full border border-border bg-muted/30 hover:bg-muted flex items-center justify-center transition-colors"
+                          className="h-8 w-8 rounded-full border border-border bg-muted/30 hover:bg-muted flex items-center justify-center transition-colors"
                           onClick={(e) => { e.stopPropagation(); navigate(`/contactos/${c.id}`); }}
                         >
-                          <Eye className="h-4.5 w-4.5 text-muted-foreground" />
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                        <button
+                          className="h-8 w-8 rounded-full border border-destructive/20 bg-destructive/5 hover:bg-destructive/15 flex items-center justify-center transition-colors"
+                          title="Eliminar contacto"
+                          onClick={(e) => { e.stopPropagation(); setDeleteTarget(c); }}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
                         </button>
                       </div>
                     </TableCell>
@@ -262,6 +282,22 @@ export default function ContactsPage({ filterCategory }: { filterCategory?: stri
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar contacto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará <strong>{deleteTarget?.first_name} {deleteTarget?.last_name || ""}</strong>. Sus datos se conservarán pero dejará de aparecer en las listas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Eliminar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }

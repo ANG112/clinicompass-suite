@@ -8,17 +8,18 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Settings, Users, Tag, Shield, Receipt, Plus, Loader2, Pencil, MapPin, Trash2 } from "lucide-react";
 import { useInvoiceSeries, useCreateInvoiceSeries } from "@/hooks/useBilling";
-import { useAllServices, useCreateService, useUpdateService } from "@/hooks/useServicesAdmin";
+import { useAllServices, useCreateService, useUpdateService, useDeleteService } from "@/hooks/useServicesAdmin";
 import { useCenters } from "@/hooks/useCenters";
 import { useAuth } from "@/hooks/useAuth";
 import { useAllStaffCenterServices, useAddStaffCenterService, useRemoveStaffCenterService } from "@/hooks/useStaffCenterServices";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Constants } from "@/integrations/supabase/types";
 
@@ -56,8 +57,10 @@ export default function SettingsPage() {
   const { data: allServices, isLoading: servicesLoading } = useAllServices();
   const createService = useCreateService();
   const updateService = useUpdateService();
+  const deleteService = useDeleteService();
   const [openService, setOpenService] = useState(false);
   const [editingService, setEditingService] = useState<any>(null);
+  const [deleteServiceTarget, setDeleteServiceTarget] = useState<any>(null);
   const [svcForm, setSvcForm] = useState({
     name: "", business_line: "fisioterapia", duration_minutes: "60", price: "0", active: true,
   });
@@ -87,6 +90,15 @@ export default function SettingsPage() {
     } catch (e: any) { toast.error(e.message); }
   };
 
+  const handleDeleteService = async () => {
+    if (!deleteServiceTarget) return;
+    try {
+      await deleteService.mutateAsync(deleteServiceTarget.id);
+      toast.success("Servicio eliminado");
+    } catch (e: any) { toast.error(e.message); }
+    setDeleteServiceTarget(null);
+  };
+
   const openEditService = (svc: any) => {
     setEditingService(svc);
     setSvcForm({
@@ -110,12 +122,24 @@ export default function SettingsPage() {
   const [openUser, setOpenUser] = useState(false);
   const [creatingUser, setCreatingUser] = useState(false);
   const [editingStaff, setEditingStaff] = useState<any>(null);
+  const [deleteStaffTarget, setDeleteStaffTarget] = useState<any>(null);
   const [editRoles, setEditRoles] = useState<string[]>([]);
   const [editProfile, setEditProfile] = useState({ first_name: "", last_name: "", email: "", phone: "", center_id: "", specialty: "" });
   const [savingEdit, setSavingEdit] = useState(false);
   const [userForm, setUserForm] = useState({
     email: "", password: "", first_name: "", last_name: "",
     center_id: "", specialty: "", roles: [] as string[],
+  });
+
+  // Delete staff mutation (soft-delete by setting active=false)
+  const deleteStaffMutation = useMutation({
+    mutationFn: async (staffId: string) => {
+      const { error } = await supabase.from("staff_profiles").update({ active: false }).eq("id", staffId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["staff-with-roles"] });
+    },
   });
 
   // Fetch staff profiles with roles
@@ -147,7 +171,6 @@ export default function SettingsPage() {
       toast.error("Selecciona profesional, centro y servicio");
       return;
     }
-    // Check duplicate
     const dup = scsAll?.find((a: any) =>
       a.staff_profile_id === assignForm.staff_profile_id &&
       a.center_id === assignForm.center_id &&
@@ -241,7 +264,6 @@ export default function SettingsPage() {
     if (!editingStaff) return;
     setSavingEdit(true);
     try {
-      // 1. Update staff_profiles
       const { error: profileError } = await supabase
         .from("staff_profiles")
         .update({
@@ -255,7 +277,6 @@ export default function SettingsPage() {
         .eq("id", editingStaff.id);
       if (profileError) throw profileError;
 
-      // 2. Update roles (differential)
       const { data: currentRoles } = await supabase
         .from("user_roles")
         .select("id, role")
@@ -284,6 +305,15 @@ export default function SettingsPage() {
     } finally {
       setSavingEdit(false);
     }
+  };
+
+  const handleDeleteStaff = async () => {
+    if (!deleteStaffTarget) return;
+    try {
+      await deleteStaffMutation.mutateAsync(deleteStaffTarget.id);
+      toast.success("Miembro del equipo desactivado");
+    } catch (e: any) { toast.error(e.message); }
+    setDeleteStaffTarget(null);
   };
 
   const isGerencia = hasRole("gerencia");
@@ -405,9 +435,16 @@ export default function SettingsPage() {
                       <Switch checked={svc.active} onCheckedChange={() => toggleServiceActive(svc)} />
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => openEditService(svc)}>
-                        <Pencil className="h-3 w-3" /> Editar
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => openEditService(svc)}>
+                          <Pencil className="h-3 w-3" /> Editar
+                        </Button>
+                        {isGerencia && (
+                          <button className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors" onClick={() => setDeleteServiceTarget(svc)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -453,9 +490,23 @@ export default function SettingsPage() {
               </div>
             </DialogContent>
           </Dialog>
+
+          <AlertDialog open={!!deleteServiceTarget} onOpenChange={(open) => { if (!open) setDeleteServiceTarget(null); }}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Eliminar servicio?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Se eliminará permanentemente el servicio <strong>"{deleteServiceTarget?.name}"</strong>. Esta acción no se puede deshacer.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteService} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Eliminar</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </TabsContent>
 
-        {/* NEW: Assignments tab */}
         <TabsContent value="assignments">
           <div className="stat-card max-w-4xl">
             <div className="flex items-center justify-between mb-4">
@@ -639,10 +690,10 @@ export default function SettingsPage() {
                   <TableHead className="font-semibold">Nombre</TableHead>
                   <TableHead className="font-semibold">Email</TableHead>
                   <TableHead className="font-semibold">Centro</TableHead>
-                   <TableHead className="font-semibold">Roles</TableHead>
-                   {isGerencia && <TableHead className="w-[60px]"></TableHead>}
-                 </TableRow>
-               </TableHeader>
+                  <TableHead className="font-semibold">Roles</TableHead>
+                  {isGerencia && <TableHead className="w-[100px]">Acciones</TableHead>}
+                </TableRow>
+              </TableHeader>
               <TableBody>
                 {staffLoading ? (
                   <TableRow><TableCell colSpan={5} className="text-center py-4 text-muted-foreground">Cargando...</TableCell></TableRow>
@@ -667,9 +718,14 @@ export default function SettingsPage() {
                     </TableCell>
                     {isGerencia && (
                       <TableCell>
-                        <button className="p-1.5 rounded-md hover:bg-muted transition-colors" onClick={() => openEditStaff(s)}>
-                          <Pencil className="h-4 w-4 text-muted-foreground" />
-                        </button>
+                        <div className="flex gap-1">
+                          <button className="p-1.5 rounded-md hover:bg-muted transition-colors" onClick={() => openEditStaff(s)}>
+                            <Pencil className="h-4 w-4 text-muted-foreground" />
+                          </button>
+                          <button className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors" onClick={() => setDeleteStaffTarget(s)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </button>
+                        </div>
                       </TableCell>
                     )}
                   </TableRow>
@@ -723,16 +779,16 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Roles *</Label>
+                  <Label className="text-xs">Roles *</Label>
                   <div className="grid grid-cols-2 gap-2">
                     {ALL_ROLES.map((role) => (
-                      <label key={role} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors">
+                      <div key={role} className="flex items-center gap-2">
                         <Checkbox
                           checked={userForm.roles.includes(role)}
                           onCheckedChange={() => toggleRole(role)}
                         />
-                        <span className="text-sm">{ROLE_LABELS[role] || role}</span>
-                      </label>
+                        <span className="text-xs">{ROLE_LABELS[role] || role}</span>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -747,12 +803,9 @@ export default function SettingsPage() {
             </DialogContent>
           </Dialog>
 
-          {/* Edit staff dialog */}
           <Dialog open={!!editingStaff} onOpenChange={(open) => { if (!open) setEditingStaff(null); }}>
             <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Editar usuario — {editingStaff?.first_name} {editingStaff?.last_name}</DialogTitle>
-              </DialogHeader>
+              <DialogHeader><DialogTitle>Editar usuario: {editingStaff?.first_name} {editingStaff?.last_name}</DialogTitle></DialogHeader>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
@@ -767,7 +820,7 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-xs">Email</Label>
-                    <Input className="h-9" value={editProfile.email} onChange={e => setEditProfile({ ...editProfile, email: e.target.value })} />
+                    <Input className="h-9" type="email" value={editProfile.email} onChange={e => setEditProfile({ ...editProfile, email: e.target.value })} />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Teléfono</Label>
@@ -795,16 +848,20 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Roles</Label>
+                  <Label className="text-xs">Roles</Label>
                   <div className="grid grid-cols-2 gap-2">
                     {ALL_ROLES.map((role) => (
-                      <label key={role} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors">
+                      <div key={role} className="flex items-center gap-2">
                         <Checkbox
                           checked={editRoles.includes(role)}
-                          onCheckedChange={() => setEditRoles(prev => prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role])}
+                          onCheckedChange={() => {
+                            setEditRoles(prev =>
+                              prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
+                            );
+                          }}
                         />
-                        <span className="text-sm">{ROLE_LABELS[role] || role}</span>
-                      </label>
+                        <span className="text-xs">{ROLE_LABELS[role] || role}</span>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -818,6 +875,21 @@ export default function SettingsPage() {
               </div>
             </DialogContent>
           </Dialog>
+
+          <AlertDialog open={!!deleteStaffTarget} onOpenChange={(open) => { if (!open) setDeleteStaffTarget(null); }}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Desactivar miembro del equipo?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Se desactivará a <strong>{deleteStaffTarget?.first_name} {deleteStaffTarget?.last_name}</strong>. Ya no aparecerá en las listas activas pero sus datos se conservarán.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteStaff} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Desactivar</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </TabsContent>
       </Tabs>
     </AppLayout>

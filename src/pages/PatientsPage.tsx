@@ -5,18 +5,13 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog";
-import { Plus, Search, Eye, MoreHorizontal, Loader2, Users } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Plus, Search, Eye, Loader2, Users, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { usePatients, useCreatePatient } from "@/hooks/usePatients";
+import { usePatients, useCreatePatient, useDeletePatient } from "@/hooks/usePatients";
 import { useCenters } from "@/hooks/useCenters";
 import { useStaffProfiles } from "@/hooks/useAppointments";
 import { useCenterFilter } from "@/components/layout/CenterSelector";
@@ -33,6 +28,7 @@ export default function PatientsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const navigate = useNavigate();
   const { selectedCenterId } = useCenterFilter();
 
@@ -44,6 +40,7 @@ export default function PatientsPage() {
   const { data: centers } = useCenters();
   const { data: staff } = useStaffProfiles();
   const createPatient = useCreatePatient();
+  const deletePatient = useDeletePatient();
 
   const [form, setForm] = useState({
     first_name: "", last_name: "", nif: "", phone: "", email: "",
@@ -67,6 +64,15 @@ export default function PatientsPage() {
     } catch (err: any) {
       toast.error(err.message || "Error al crear paciente");
     }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deletePatient.mutateAsync(deleteTarget.id);
+      toast.success("Paciente eliminado");
+    } catch (e: any) { toast.error(e.message); }
+    setDeleteTarget(null);
   };
 
   return (
@@ -202,7 +208,7 @@ export default function PatientsPage() {
                 <TableHead className="font-semibold">Centro</TableHead>
                 <TableHead className="font-semibold">Profesional</TableHead>
                 <TableHead className="font-semibold">Estado</TableHead>
-                <TableHead className="w-[60px]"></TableHead>
+                <TableHead className="w-[100px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -227,9 +233,14 @@ export default function PatientsPage() {
                     <TableCell className="text-sm">{profName}</TableCell>
                     <TableCell><StatusBadge variant={st.variant}>{st.label}</StatusBadge></TableCell>
                     <TableCell>
-                      <button className="p-1.5 rounded-md hover:bg-muted transition-colors" onClick={(e) => { e.stopPropagation(); navigate(`/pacientes/${p.id}`); }}>
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                      </button>
+                      <div className="flex gap-1">
+                        <button className="p-1.5 rounded-md hover:bg-muted transition-colors" onClick={(e) => { e.stopPropagation(); navigate(`/pacientes/${p.id}`); }}>
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                        <button className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors" onClick={(e) => { e.stopPropagation(); setDeleteTarget(p); }}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -238,6 +249,22 @@ export default function PatientsPage() {
           </Table>
         )}
       </div>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar paciente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará a <strong>{deleteTarget?.first_name} {deleteTarget?.last_name}</strong>. Sus datos se conservarán pero dejará de aparecer en las listas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Eliminar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
