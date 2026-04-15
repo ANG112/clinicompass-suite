@@ -68,6 +68,45 @@ export default function SettingsPage() {
 
   const resetSvcForm = () => setSvcForm({ name: "", business_line: "fisioterapia", duration_minutes: "60", price: "0", active: true });
 
+  // Specialties state
+  const { data: allSpecialties, isLoading: specialtiesLoading } = useAllSpecialties();
+  const createSpecialty = useCreateSpecialty();
+  const updateSpecialtyMut = useUpdateSpecialty();
+  const deleteSpecialtyMut = useDeleteSpecialty();
+  const [openSpecialty, setOpenSpecialty] = useState(false);
+  const [editingSpecialty, setEditingSpecialty] = useState<any>(null);
+  const [deleteSpecialtyTarget, setDeleteSpecialtyTarget] = useState<any>(null);
+  const [specForm, setSpecForm] = useState({ name: "", slug: "", icon_name: "Activity" });
+
+  const ICON_OPTIONS = ["Activity", "Apple", "Brain", "Heart", "Zap", "Dumbbell", "Leaf", "Eye", "Stethoscope"];
+
+  const handleSaveSpecialty = async () => {
+    if (!specForm.name) { toast.error("El nombre es obligatorio"); return; }
+    const slug = specForm.slug || specForm.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/-+$/,"");
+    try {
+      if (editingSpecialty) {
+        await updateSpecialtyMut.mutateAsync({ id: editingSpecialty.id, name: specForm.name, slug, icon_name: specForm.icon_name });
+        toast.success("Especialidad actualizada");
+      } else {
+        await createSpecialty.mutateAsync({ name: specForm.name, slug, icon_name: specForm.icon_name });
+        toast.success("Especialidad creada");
+      }
+      setOpenSpecialty(false);
+      setEditingSpecialty(null);
+      setSpecForm({ name: "", slug: "", icon_name: "Activity" });
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const handleDeleteSpecialty = async () => {
+    if (!deleteSpecialtyTarget) return;
+    try {
+      await deleteSpecialtyMut.mutateAsync(deleteSpecialtyTarget.id);
+      toast.success("Especialidad eliminada");
+    } catch (e: any) { toast.error(e.message); }
+    setDeleteSpecialtyTarget(null);
+  };
+
+
   const handleSaveService = async () => {
     if (!svcForm.name) { toast.error("El nombre del servicio es obligatorio"); return; }
     try {
