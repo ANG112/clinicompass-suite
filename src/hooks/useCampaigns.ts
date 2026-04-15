@@ -85,8 +85,8 @@ export function useCreateCampaign() {
 export function useUpdateCampaign() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
-      const { data, error } = await supabase.from("campaigns").update(updates).eq("id", id).select().single();
+    mutationFn: async ({ id, ...updates }: { id: string; name?: string; description?: string; business_line?: string; center_id?: string | null; status?: string; target_count?: number; start_date?: string | null; end_date?: string | null }) => {
+      const { data, error } = await supabase.from("campaigns").update(updates as any).eq("id", id).select().single();
       if (error) throw error;
       return data;
     },
