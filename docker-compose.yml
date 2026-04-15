@@ -1,0 +1,12 @@
+services:
+  clinicompass-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+    container_name: clinicompass-frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
