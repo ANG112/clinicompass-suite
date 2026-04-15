@@ -12,9 +12,7 @@ import ContactDetailPage from "./pages/ContactDetailPage";
 import BusinessesPage from "./pages/BusinessesPage";
 import AgendaPage from "./pages/AgendaPage";
 import CentersPage from "./pages/CentersPage";
-import PhysioPage from "./pages/PhysioPage";
-import NutritionPage from "./pages/NutritionPage";
-import PsychotechPage from "./pages/PsychotechPage";
+import SpecialtyPage from "./pages/SpecialtyPage";
 import CampaignsPage from "./pages/CampaignsPage";
 import BillingPage from "./pages/BillingPage";
 import QuotesPage from "./pages/QuotesPage";
@@ -68,9 +66,11 @@ const App = () => (
             <Route path="/negocios" element={<ProtectedRoute><BusinessesPage /></ProtectedRoute>} />
             <Route path="/agenda" element={<ProtectedRoute><AgendaPage /></ProtectedRoute>} />
             <Route path="/centros" element={<ProtectedRoute><CentersPage /></ProtectedRoute>} />
-            <Route path="/fisioterapia" element={<ProtectedRoute><PhysioPage /></ProtectedRoute>} />
-            <Route path="/nutricion" element={<ProtectedRoute><NutritionPage /></ProtectedRoute>} />
-            <Route path="/psicotecnicos" element={<ProtectedRoute><PsychotechPage /></ProtectedRoute>} />
+            <Route path="/especialidad/:slug" element={<ProtectedRoute><SpecialtyPage /></ProtectedRoute>} />
+            {/* Legacy routes */}
+            <Route path="/fisioterapia" element={<Navigate to="/especialidad/fisioterapia" replace />} />
+            <Route path="/nutricion" element={<Navigate to="/especialidad/nutricion" replace />} />
+            <Route path="/psicotecnicos" element={<Navigate to="/especialidad/psicotecnicos" replace />} />
             <Route path="/campanas" element={<ProtectedRoute><CampaignsPage /></ProtectedRoute>} />
             <Route path="/facturacion" element={<ProtectedRoute><InvoicesPage /></ProtectedRoute>} />
             <Route path="/presupuestos" element={<ProtectedRoute><QuotesPage /></ProtectedRoute>} />
@@ -78,7 +78,6 @@ const App = () => (
             <Route path="/facturas-simplificadas" element={<ProtectedRoute><InvoicesPage invoiceType="simplificada" /></ProtectedRoute>} />
             <Route path="/documentos" element={<ProtectedRoute><DocumentsPage /></ProtectedRoute>} />
             <Route path="/configuracion" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-            {/* Legacy routes redirect */}
             <Route path="/pipeline" element={<Navigate to="/negocios" replace />} />
             <Route path="/pacientes" element={<Navigate to="/clientes" replace />} />
             <Route path="/pacientes/:id" element={<Navigate to="/contactos/:id" replace />} />
