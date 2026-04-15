@@ -627,6 +627,7 @@ export default function AgendaPage() {
                                   <p className="text-[10px] text-muted-foreground">{slot.start_time.slice(0, 5)}–{slot.end_time.slice(0, 5)}</p>
                                   {slot.professional && <p className="text-[10px] text-muted-foreground truncate">{slot.professional.first_name} {slot.professional.last_name}</p>}
                                   {slot.service && <p className="text-[9px] text-muted-foreground truncate">{slot.service.name}</p>}
+                                  {slot.center && selectedCenterId === "all" && <p className="text-[9px] text-muted-foreground/70 truncate flex items-center gap-0.5"><MapPin className="h-2.5 w-2.5" />{slot.center.name}</p>}
                                 </div>
                               );
                             }
