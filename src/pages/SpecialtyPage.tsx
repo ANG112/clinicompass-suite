@@ -16,7 +16,7 @@ import { useCenterFilter } from "@/components/layout/CenterSelector";
 export default function SpecialtyPage() {
   const { slug } = useParams<{ slug: string }>();
   const { data: specialties } = useSpecialties();
-  const { selectedCenter } = useCenterContext();
+  const { selectedCenterId: selectedCenter } = useCenterFilter();
   const specialty = specialties?.find((s: any) => s.slug === slug);
 
   // Get services for this specialty (using business_line matching slug)
