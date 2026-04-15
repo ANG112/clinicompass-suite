@@ -549,6 +549,7 @@ export default function SettingsPage() {
           </AlertDialog>
         </TabsContent>
 
+        <TabsContent value="services">
           <div className="stat-card max-w-4xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold font-heading text-foreground">Servicios disponibles</h3>
