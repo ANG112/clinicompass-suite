@@ -580,7 +580,7 @@ export default function SettingsPage() {
                     <TableCell className="text-sm font-medium">{svc.name}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-[10px]">
-                        {svc.business_line === "fisioterapia" ? "Fisioterapia" : svc.business_line === "nutricion" ? "Nutrición" : "Psicotécnicos"}
+                        {allSpecialties?.find((sp: any) => sp.slug === svc.business_line)?.name || svc.business_line}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm">{svc.duration_minutes} min</TableCell>
