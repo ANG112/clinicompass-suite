@@ -6,6 +6,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function normalize(s: string): string {
+  return (s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -42,10 +50,21 @@ serve(async (req) => {
     // Fetch current record for field editing context
     const { data: currentRecord, error: fetchErr } = await supabaseAdmin
       .from(table)
-      .select("*")
+      .select("*, center:centers(id, name, city)")
       .eq("id", entity_id)
       .single();
     if (fetchErr) throw new Error(`Record not found: ${fetchErr.message}`);
+
+    // Fetch active centers catalog for LLM disambiguation
+    const { data: centers } = await supabaseAdmin
+      .from("centers")
+      .select("id, name, city")
+      .is("deleted_at", null)
+      .eq("active", true);
+
+    const centerCatalog = (centers || []).map((c: any) =>
+      `  • ${c.name}${c.city ? ` (${c.city})` : ""} → id: ${c.id}`
+    ).join("\n");
 
     const editableFields: Record<string, string> = {
       first_name: "Nombre",
@@ -55,7 +74,7 @@ serve(async (req) => {
       sex: "Sexo (hombre/mujer)",
       phone: "Teléfono",
       email: "Email",
-      address: "Dirección",
+      address: "Dirección postal (calle, número, piso) — NO usar para centro clínico",
       city: "Ciudad",
       postal_code: "Código postal",
       notes: "Observaciones/notas",
@@ -66,10 +85,17 @@ serve(async (req) => {
       fiscal_address: "Dirección fiscal",
       fiscal_email: "Email fiscal",
       fiscal_phone: "Teléfono fiscal",
+      center_id: "Centro clínico asignado (UUID del centro de la lista) — usar SOLO cuando el usuario diga 'centro', 'sede' o 'clínica'",
     };
 
     const currentValues = Object.entries(editableFields)
-      .map(([key, label]) => `- ${label} (${key}): ${currentRecord[key] ?? "(vacío)"}`)
+      .map(([key, label]) => {
+        if (key === "center_id") {
+          const cur = currentRecord.center ? `${currentRecord.center.name}${currentRecord.center.city ? ` (${currentRecord.center.city})` : ""}` : "(vacío)";
+          return `- ${label} (${key}): ${cur}`;
+        }
+        return `- ${label} (${key}): ${currentRecord[key] ?? "(vacío)"}`;
+      })
       .join("\n");
 
     // Single LLM call that classifies AND extracts structured actions
@@ -86,35 +112,56 @@ serve(async (req) => {
             role: "system",
             content: `Eres un asistente de CRM sanitario. Un profesional dicta un audio que puede contener CUALQUIER combinación de:
 
-1. INSTRUCCIONES PARA MODIFICAR LA FICHA del paciente/contacto (cambiar teléfono, email, dirección, nombre, etc.)
-2. NOTAS DE SESIÓN CLÍNICA (descripción de lo ocurrido en una sesión, visita, tratamiento, etc.)
+1. INSTRUCCIONES PARA MODIFICAR LA FICHA del paciente/contacto
+2. NOTAS DE SESIÓN CLÍNICA
 
-Debes analizar la transcripción completa y usar la función "process_voice" para devolver:
-- "field_changes": array de cambios de campos de la ficha (puede estar vacío si no hay cambios de datos)
-- "session_note": texto estructurado de la sesión clínica (null si no hay información de sesión)
-- "interpretation": resumen breve de lo que interpretaste
+Debes analizar la transcripción y usar la función "process_voice".
 
-Reglas para field_changes:
+================================================
+REGLAS CRÍTICAS DE DESAMBIGUACIÓN — CENTRO vs DIRECCIÓN
+================================================
+Estos dos campos son SEMÁNTICAMENTE DIFERENTES y NUNCA deben confundirse:
+
+• "centro" / "sede" / "clínica" / "centro clínico" / "centro asignado"
+  → MODIFICA SIEMPRE el campo "center_id" (NO "address")
+  → El new_value DEBE ser el UUID exacto de uno de los centros del catálogo de abajo
+  → Si el centro mencionado no aparece en el catálogo, NO incluyas el cambio
+  → Ejemplos:
+     - "cambia el centro a Alcalá" → field="center_id", new_value="<uuid de Alcalá>"
+     - "asígnalo al centro de Torrejón" → field="center_id"
+     - "muévelo a la clínica de Getafe" → field="center_id"
+
+• "dirección" / "domicilio" / "calle" / "vive en" / "dirección postal"
+  → MODIFICA SIEMPRE el campo "address" (NO "center_id")
+  → Ejemplos:
+     - "cambia la dirección a Calle Mayor 12" → field="address"
+     - "vive en Avenida de la Paz 5" → field="address"
+     - "su domicilio nuevo es..." → field="address"
+
+NUNCA modifiques "address" cuando el usuario diga "centro".
+NUNCA modifiques "center_id" cuando el usuario diga "dirección".
+Si tienes la mínima duda sobre cuál es el campo correcto, NO incluyas el cambio.
+
+CATÁLOGO DE CENTROS DISPONIBLES (usa estos UUIDs exactos):
+${centerCatalog || "  (sin centros configurados)"}
+
+================================================
+RESTO DE REGLAS
+================================================
 - Solo modifica campos mencionados explícita o implícitamente.
 - Para fechas, usa formato YYYY-MM-DD.
 - Para sexo, usa "hombre" o "mujer".
 - Si dice "segundo apellido", modifica last_name añadiendo/cambiando la segunda palabra.
-- Resuelve ambigüedades razonables.
+- Sé CONSERVADOR: ante ambigüedad, NO incluyas el cambio.
 
 Reglas para session_note:
 - Extrae información sobre sesiones, visitas, tratamientos, evolución del paciente.
 - Si menciona un doctor/profesional, inclúyelo.
-- Estructura el texto de forma clara y profesional.
-- Si no hay información de sesión, devuelve null.
-
-IMPORTANTE: Un mismo audio puede contener AMBAS cosas. Por ejemplo:
-"Cambia el email del paciente a nuevo@email.com y añade que hoy tuvo sesión con el doctor Pedro donde se trabajó movilidad lumbar"
-→ field_changes: [{field: "email", new_value: "nuevo@email.com", reason: "..."}]
-→ session_note: "Sesión con Dr. Pedro. Se trabajó movilidad lumbar."`,
+- Si no hay información de sesión, devuelve null.`,
           },
           {
             role: "user",
-            content: `Ficha actual del paciente/contacto:\n${currentValues}\n\nTranscripción del audio: "${transcription}"`,
+            content: `Ficha actual:\n${currentValues}\n\nTranscripción del audio: "${transcription}"`,
           },
         ],
         tools: [
@@ -128,13 +175,13 @@ IMPORTANTE: Un mismo audio puede contener AMBAS cosas. Por ejemplo:
                 properties: {
                   field_changes: {
                     type: "array",
-                    description: "Cambios a aplicar en los campos de la ficha. Vacío si no hay cambios de datos.",
+                    description: "Cambios a aplicar en los campos. Vacío si no hay cambios de datos.",
                     items: {
                       type: "object",
                       properties: {
-                        field: { type: "string", description: "Nombre del campo a modificar" },
-                        new_value: { type: "string", description: "Nuevo valor" },
-                        reason: { type: "string", description: "Explicación breve" },
+                        field: { type: "string", description: "Nombre del campo a modificar (ej. 'address', 'center_id', 'phone')" },
+                        new_value: { type: "string", description: "Nuevo valor. Para center_id debe ser el UUID exacto del catálogo." },
+                        reason: { type: "string", description: "Explicación breve, indicando claramente la palabra clave del audio que justifica el cambio (ej. 'el usuario dijo centro', 'el usuario dijo dirección')." },
                       },
                       required: ["field", "new_value", "reason"],
                     },
@@ -142,11 +189,11 @@ IMPORTANTE: Un mismo audio puede contener AMBAS cosas. Por ejemplo:
                   session_note: {
                     type: "string",
                     nullable: true,
-                    description: "Contenido estructurado de la nota de sesión. null si no hay información de sesión.",
+                    description: "Contenido de la nota de sesión. null si no hay.",
                   },
                   interpretation: {
                     type: "string",
-                    description: "Resumen de lo que se interpretó del audio.",
+                    description: "Resumen de lo interpretado.",
                   },
                 },
                 required: ["field_changes", "session_note", "interpretation"],
@@ -162,7 +209,7 @@ IMPORTANTE: Un mismo audio puede contener AMBAS cosas. Por ejemplo:
       const errText = await aiResponse.text();
       console.error("AI error:", aiResponse.status, errText);
       if (aiResponse.status === 429) {
-        return new Response(JSON.stringify({ error: "Límite de peticiones excedido. Inténtalo de nuevo en unos segundos." }), {
+        return new Response(JSON.stringify({ error: "Límite de peticiones excedido." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -179,7 +226,32 @@ IMPORTANTE: Un mismo audio puede contener AMBAS cosas. Por ejemplo:
     if (!toolCall) throw new Error("La IA no pudo interpretar la instrucción");
 
     const parsed = JSON.parse(toolCall.function.arguments);
-    const { field_changes = [], session_note, interpretation } = parsed;
+    let { field_changes = [], session_note, interpretation } = parsed;
+
+    // ===== POST-VALIDATION GUARD: avoid silly "centro" -> address mistakes =====
+    const transNorm = normalize(transcription);
+    const mentionsCenter = /(\bcentro\b|\bsede\b|\bclinica\b|\bcl[ií]nica\b)/.test(transNorm);
+    const mentionsAddress = /(\bdirecc[ií]on\b|\bdomicilio\b|\bcalle\b|\bavenida\b|\bavda\b|\bvive en\b|\bplaza\b)/.test(transNorm);
+    const centerIds = new Set((centers || []).map((c: any) => c.id));
+
+    field_changes = (field_changes || []).filter((c: any) => {
+      // If model wrote "address" but user only mentioned "centro" → discard
+      if (c.field === "address" && mentionsCenter && !mentionsAddress) {
+        console.warn("Guard: discarded address change — user mentioned 'centro' not 'dirección'", c);
+        return false;
+      }
+      // If model wrote "center_id" but user only mentioned "dirección" → discard
+      if (c.field === "center_id" && mentionsAddress && !mentionsCenter) {
+        console.warn("Guard: discarded center_id change — user mentioned 'dirección' not 'centro'", c);
+        return false;
+      }
+      // center_id must be a known UUID
+      if (c.field === "center_id" && !centerIds.has(c.new_value)) {
+        console.warn("Guard: discarded center_id with unknown UUID", c);
+        return false;
+      }
+      return true;
+    });
 
     const results: {
       field_changes_applied: any[];
@@ -204,11 +276,21 @@ IMPORTANTE: Un mismo audio puede contener AMBAS cosas. Por ejemplo:
         if (!(change.field in editableFields)) continue;
         const oldValue = currentRecord[change.field];
         updateObj[change.field] = change.new_value === "" ? null : change.new_value;
+
+        // Build human-friendly label for center_id
+        let displayOld = oldValue ?? null;
+        let displayNew = change.new_value;
+        if (change.field === "center_id") {
+          displayOld = currentRecord.center?.name ?? null;
+          const tgt = (centers || []).find((c: any) => c.id === change.new_value);
+          displayNew = tgt ? tgt.name : change.new_value;
+        }
+
         fieldsChanged.push({
           field: change.field,
-          label: editableFields[change.field],
-          old_value: oldValue ?? null,
-          new_value: change.new_value,
+          label: editableFields[change.field].split(" — ")[0].split(" (")[0],
+          old_value: displayOld,
+          new_value: displayNew,
           reason: change.reason,
         });
       }
@@ -220,7 +302,6 @@ IMPORTANTE: Un mismo audio puede contener AMBAS cosas. Por ejemplo:
           .eq("id", entity_id);
         if (updateErr) console.error("Update error:", updateErr);
 
-        // Save voice edit traceability
         await supabaseAdmin.from("patient_voice_edits").insert({
           [idCol]: entity_id,
           created_by: staffProfile?.id || null,
@@ -254,7 +335,6 @@ IMPORTANTE: Un mismo audio puede contener AMBAS cosas. Por ejemplo:
       } else {
         results.session_note_created = true;
 
-        // Update synopsis
         try {
           const { data: existingSynopsis } = await supabaseAdmin
             .from("patient_synopsis")
