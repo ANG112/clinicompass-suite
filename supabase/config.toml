@@ -1,19 +1,19 @@
 project_id = "sngrwurunaidqbhzcsrv"
 
 [functions.create-contact-voice]
-verify_jwt = true
+verify_jwt = false
 
 [functions.process-voice-unified]
-verify_jwt = true
+verify_jwt = false
 
 [functions.process-voice-edit]
-verify_jwt = true
+verify_jwt = false
 
 [functions.process-patient-note]
-verify_jwt = true
+verify_jwt = false
 
 [functions.process-session-note]
-verify_jwt = true
+verify_jwt = false
 
 [functions.create-user]
-verify_jwt = true
+verify_jwt = false
