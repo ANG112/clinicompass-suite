@@ -57,7 +57,7 @@ serve(async (req) => {
       sex: "Sexo (hombre/mujer)",
       phone: "Teléfono",
       email: "Email",
-      address: "Dirección",
+      address: "Dirección postal (calle/número) — NUNCA confundir con centro",
       city: "Ciudad",
       postal_code: "Código postal",
       notes: "Observaciones/notas",
@@ -72,6 +72,11 @@ serve(async (req) => {
     const currentValues = Object.entries(editableFields).map(
       ([key, label]) => `- ${label} (${key}): ${currentRecord[key] ?? "(vacío)"}`
     ).join("\n");
+
+    const normalize = (s: string) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const transNorm = normalize(transcription);
+    const mentionsCenter = /(\bcentro\b|\bsede\b|\bclinica\b|\bcl[ií]nica\b)/.test(transNorm);
+    const mentionsAddress = /(\bdirecc[ií]on\b|\bdomicilio\b|\bcalle\b|\bavenida\b|\bavda\b|\bvive en\b|\bplaza\b)/.test(transNorm);
 
     // Call LLM with tool calling
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -159,11 +164,16 @@ Reglas:
 
     for (const change of changes) {
       if (!(change.field in editableFields)) continue;
+      // Guard: never let "address" be modified when the user only said "centro"
+      if (change.field === "address" && mentionsCenter && !mentionsAddress) {
+        console.warn("Guard: discarded address change — user mentioned 'centro' not 'dirección'", change);
+        continue;
+      }
       const oldValue = currentRecord[change.field];
       updateObj[change.field] = change.new_value === "" ? null : change.new_value;
       fieldsChanged.push({
         field: change.field,
-        label: editableFields[change.field],
+        label: editableFields[change.field].split(" — ")[0],
         old_value: oldValue ?? null,
         new_value: change.new_value,
         reason: change.reason,
