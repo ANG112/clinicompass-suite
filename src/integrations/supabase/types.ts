@@ -1308,6 +1308,54 @@ export type Database = {
           },
         ]
       }
+      patient_session_entries: {
+        Row: {
+          audio_file_path: string | null
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          session_id: string
+          source: string
+          transcription: string | null
+        }
+        Insert: {
+          audio_file_path?: string | null
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          session_id: string
+          source?: string
+          transcription?: string | null
+        }
+        Update: {
+          audio_file_path?: string | null
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          session_id?: string
+          source?: string
+          transcription?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_session_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_session_entries_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "patient_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patient_session_notes: {
         Row: {
           audio_file_path: string | null
@@ -1355,6 +1403,87 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_sessions: {
+        Row: {
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          patient_id: string | null
+          professional_id: string | null
+          session_date: string
+          session_number: number
+          status: string
+          summary: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          patient_id?: string | null
+          professional_id?: string | null
+          session_date?: string
+          session_number: number
+          status?: string
+          summary?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          patient_id?: string | null
+          professional_id?: string | null
+          session_date?: string
+          session_number?: number
+          status?: string
+          summary?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_sessions_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_sessions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_sessions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_sessions_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "staff_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_sessions_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "staff_profiles"
             referencedColumns: ["id"]
           },
         ]
