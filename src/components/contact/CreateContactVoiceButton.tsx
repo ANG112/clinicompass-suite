@@ -154,17 +154,20 @@ export function CreateContactVoiceButton() {
   return (
     <>
       <Button size="sm" variant="outline" className="gap-2" onClick={() => setOpen(true)}>
-        <Sparkles className="h-4 w-4" /> Crear por voz
+        <Sparkles className="h-4 w-4" /> Asistente de voz
       </Button>
 
       <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); else setOpen(true); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="font-heading flex items-center gap-2">
-              <Mic className="h-4 w-4 text-primary" /> Crear contacto por voz
+              <Mic className="h-4 w-4 text-primary" /> Asistente de voz
             </DialogTitle>
-            <DialogDescription>
-              Dicta los datos del contacto. Ej: "Crea un contacto llamado Juan Pérez, teléfono 612345678, email juan@gmail.com, centro Alcalá, categoría lead".
+            <DialogDescription className="space-y-1">
+              <span className="block">Dicta una instrucción. Puedes:</span>
+              <span className="block text-xs">• Crear contacto: <em>"Crea un contacto llamado Juan Pérez, teléfono 612345678..."</em></span>
+              <span className="block text-xs">• Crear sesión: <em>"Crea una nueva sesión para María López en la que el doctor recomendó..."</em></span>
+              <span className="block text-xs">• Añadir a sesión: <em>"Añade en la sesión 4 de María López que se ha pautado nuevo tratamiento..."</em></span>
             </DialogDescription>
           </DialogHeader>
 
@@ -177,7 +180,7 @@ export function CreateContactVoiceButton() {
               )}
               {status === "recording" && (
                 <Button onClick={stopRecording} variant="destructive" className="gap-2 animate-pulse">
-                  <Square className="h-4 w-4" /> Detener y crear
+                  <Square className="h-4 w-4" /> Detener y procesar
                 </Button>
               )}
               {status === "processing" && (
@@ -187,7 +190,7 @@ export function CreateContactVoiceButton() {
               )}
               {status === "done" && (
                 <div className="flex items-center gap-2 text-sm text-success">
-                  <CheckCircle2 className="h-4 w-4" /> Creado correctamente
+                  <CheckCircle2 className="h-4 w-4" /> Procesado correctamente
                 </div>
               )}
               {status === "error" && (
@@ -211,6 +214,29 @@ export function CreateContactVoiceButton() {
               </div>
             )}
 
+            {sessionResult && (
+              <div className="rounded-lg bg-success/10 border border-success/30 p-3 space-y-1">
+                <p className="text-xs font-semibold text-foreground">
+                  ✓ Sesión {sessionResult.session.session_number} {sessionResult.intent === "create_session" ? "creada" : "actualizada"}
+                </p>
+                <p className="text-sm text-foreground">Paciente: {sessionResult.entity.display_name}</p>
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      handleClose();
+                      const path = sessionResult.entity.entity_type === "patient" ? "pacientes" : "contactos";
+                      navigate(`/${path}/${sessionResult.entity.entity_id}`);
+                    }}
+                  >
+                    Ver ficha
+                  </Button>
+                  <Button size="sm" onClick={reset}>Otra instrucción</Button>
+                </div>
+              </div>
+            )}
+
             {created && (
               <div className="rounded-lg bg-success/10 border border-success/30 p-3 space-y-1">
                 <p className="text-xs font-semibold text-foreground">✓ Contacto creado</p>
@@ -225,7 +251,7 @@ export function CreateContactVoiceButton() {
                   <Button size="sm" variant="outline" onClick={() => { handleClose(); navigate(`/contactos/${created.id}`); }}>
                     Ver ficha
                   </Button>
-                  <Button size="sm" onClick={reset}>Crear otro</Button>
+                  <Button size="sm" onClick={reset}>Otra instrucción</Button>
                 </div>
               </div>
             )}
