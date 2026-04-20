@@ -90,12 +90,22 @@ async function regenerateGlobalSynopsis(admin: any, idCol: "patient_id" | "conta
   const synopsis = await aiCall([
     {
       role: "system",
-      content: `Eres un asistente clínico. Genera una SINOPSIS GLOBAL muy breve (5-10 líneas) del estado del paciente basándote SOLO en los resúmenes de sesión proporcionados.
+      content: `Eres un asistente clínico. Genera una SINOPSIS GLOBAL del estado del paciente basándote SOLO en los resúmenes de sesión proporcionados.
+
+Objetivo: una ficha resumen útil para que cualquier profesional entienda el caso de un vistazo, conservando contexto clínico relevante sin convertirse en un texto largo.
+
 Reglas:
-- Español, sin markdown, lenguaje clínico/profesional.
-- Prioriza información reciente y clínicamente relevante.
-- Omite detalles antiguos poco relevantes.
-- No copies literal una sesión: integra y sintetiza.
+- Español, sin markdown, sin viñetas, en párrafos breves.
+- Extensión orientativa: 12 a 18 líneas. NO ultracorta, NO larguísima.
+- Estructura sugerida (omite secciones sin contenido):
+  1. Motivo principal y diagnóstico/sospecha actual.
+  2. Evolución global a lo largo de las sesiones (mejoras, retrocesos, estabilidad).
+  3. Tratamiento/plan en curso y adherencia.
+  4. Incidencias o eventos relevantes (efectos adversos, derivaciones, pruebas).
+  5. Recomendaciones activas y próximos pasos.
+  6. Observaciones clínicas u operativas importantes (alergias, contexto personal relevante, contraindicaciones).
+- Prioriza información reciente, pero NO descartes datos antiguos clínicamente relevantes (alergias, antecedentes, diagnósticos previos).
+- Integra y sintetiza, no copies literal una sesión.
 - No inventes datos que no aparezcan en las sesiones.`,
     },
     {

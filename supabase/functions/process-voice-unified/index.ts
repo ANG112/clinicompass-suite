@@ -81,8 +81,27 @@ async function regenerateGlobalSynopsis(admin: any, idCol: string, entityId: str
     body: JSON.stringify({
       model: "google/gemini-2.5-flash",
       messages: [
-        { role: "system", content: "Sinopsis global breve (5-10 líneas) basada SOLO en los resúmenes de sesión. Español, sin markdown, integra y sintetiza. No inventes." },
-        { role: "user", content: `Resúmenes:\n\n${sessionsText}\n\nSinopsis global actualizada:` },
+        {
+          role: "system",
+          content: `Eres un asistente clínico. Genera una SINOPSIS GLOBAL del estado del paciente basándote SOLO en los resúmenes de sesión proporcionados.
+
+Objetivo: una ficha resumen útil para que cualquier profesional entienda el caso de un vistazo, conservando contexto clínico relevante sin convertirse en un texto largo.
+
+Reglas:
+- Español, sin markdown, sin viñetas, en párrafos breves.
+- Extensión orientativa: 12 a 18 líneas. NO ultracorta, NO larguísima.
+- Estructura sugerida (omite secciones sin contenido):
+  1. Motivo principal y diagnóstico/sospecha actual.
+  2. Evolución global a lo largo de las sesiones (mejoras, retrocesos, estabilidad).
+  3. Tratamiento/plan en curso y adherencia.
+  4. Incidencias o eventos relevantes (efectos adversos, derivaciones, pruebas).
+  5. Recomendaciones activas y próximos pasos.
+  6. Observaciones clínicas u operativas importantes (alergias, contexto personal relevante, contraindicaciones).
+- Prioriza información reciente, pero NO descartes datos antiguos clínicamente relevantes (alergias, antecedentes, diagnósticos previos).
+- Integra y sintetiza, no copies literal una sesión.
+- No inventes datos que no aparezcan en las sesiones.`,
+        },
+        { role: "user", content: `Resúmenes de sesión del paciente:\n\n${sessionsText}\n\nGenera la sinopsis global actualizada:` },
       ],
     }),
   });
