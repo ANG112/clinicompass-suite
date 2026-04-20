@@ -23,9 +23,8 @@ interface UnifiedResult {
     new_value: string;
     reason: string;
   }>;
-  session_note_created: boolean;
-  session_content: string | null;
-  synopsis_updated: boolean;
+  session_action_result: { type: "created" | "appended" | "error"; session_id?: string; session_number?: number; message?: string } | null;
+  notes_appended: boolean;
   interpretation: string;
 }
 
@@ -67,12 +66,14 @@ export function UnifiedVoiceButton({ entityType, entityId, compact }: Props) {
       if (data.field_changes_applied?.length > 0) {
         parts.push(`${data.field_changes_applied.length} campo(s) actualizado(s)`);
       }
-      if (data.session_note_created) {
-        parts.push("sesión registrada");
+      if (data.session_action_result?.type === "created") {
+        parts.push(`sesión ${data.session_action_result.session_number ?? ""} creada`.trim());
+      } else if (data.session_action_result?.type === "appended") {
+        parts.push(`sesión ${data.session_action_result.session_number ?? ""} actualizada`.trim());
+      } else if (data.notes_appended) {
+        parts.push("observaciones actualizadas");
       }
-      if (data.synopsis_updated) {
-        parts.push("sinopsis actualizada");
-      }
+      if (data.session_action_result || data.notes_appended) parts.push("sinopsis actualizada");
       if (parts.length > 0) {
         toast.success(parts.join(" · "));
       } else {
@@ -83,6 +84,8 @@ export function UnifiedVoiceButton({ entityType, entityId, compact }: Props) {
       qc.invalidateQueries({ queryKey: [entityType === "patient" ? "patient" : "contact", entityId] });
       qc.invalidateQueries({ queryKey: ["voice-edits", entityType, entityId] });
       qc.invalidateQueries({ queryKey: ["session-notes", entityType, entityId] });
+      qc.invalidateQueries({ queryKey: ["patient-sessions", entityType, entityId] });
+      qc.invalidateQueries({ queryKey: ["session-entries"] });
       qc.invalidateQueries({ queryKey: ["synopsis", entityType, entityId] });
 
       setTimeout(() => setStatus("idle"), 6000);
@@ -197,17 +200,26 @@ export function UnifiedVoiceButton({ entityType, entityId, compact }: Props) {
             </div>
           )}
 
-          {lastResult.session_note_created && (
+          {lastResult.session_action_result && lastResult.session_action_result.type !== "error" && (
             <div className="space-y-1">
               <p className="text-xs font-medium text-foreground">🩺 Sesión registrada:</p>
-              <p className="text-xs text-muted-foreground">{lastResult.session_content}</p>
-              {lastResult.synopsis_updated && (
-                <p className="text-[10px] text-green-600">✓ Sinopsis actualizada automáticamente</p>
-              )}
+              <p className="text-xs text-muted-foreground">
+                {lastResult.session_action_result.type === "created"
+                  ? `Se ha creado la sesión ${lastResult.session_action_result.session_number ?? ""}.`
+                  : `Se ha actualizado la sesión ${lastResult.session_action_result.session_number ?? ""}.`}
+              </p>
+              <p className="text-[10px] text-green-600">✓ Sinopsis actualizada automáticamente</p>
             </div>
           )}
 
-          {lastResult.field_changes_applied.length === 0 && !lastResult.session_note_created && (
+          {lastResult.notes_appended && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-foreground">📝 Observaciones actualizadas:</p>
+              <p className="text-xs text-muted-foreground">La instrucción se ha añadido a las notas del paciente/contacto.</p>
+            </div>
+          )}
+
+          {lastResult.field_changes_applied.length === 0 && !lastResult.session_action_result && !lastResult.notes_appended && (
             <p className="text-xs text-muted-foreground">No se detectaron cambios ni sesiones.</p>
           )}
         </div>

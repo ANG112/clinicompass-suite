@@ -272,15 +272,15 @@ ${currentValues}`,
                 session_action: {
                   type: "object",
                   nullable: true,
-                  description: "Operación de sesión si el usuario lo mencionó explícitamente.",
+                  description: "Operación de sesión si el usuario lo mencionó explícitamente. En create_session puede existir aunque no haya contenido clínico todavía.",
                   properties: {
                     type: { type: "string", enum: ["create_session", "append_to_session"] },
                     session_id: { type: "string", nullable: true },
                     session_date: { type: "string", nullable: true },
                     professional_id: { type: "string", nullable: true },
-                    content: { type: "string" },
+                    content: { type: "string", nullable: true },
                   },
-                  required: ["type", "content"],
+                  required: ["type"],
                 },
                 notes_append: {
                   type: "string",
@@ -316,6 +316,7 @@ ${currentValues}`,
     const mentionsCenter = /(\bcentro\b|\bsede\b|\bclinica\b|\bcl[ií]nica\b)/.test(transNorm);
     const mentionsAddress = /(\bdirecc[ií]on\b|\bdomicilio\b|\bcalle\b|\bavenida\b|\bavda\b|\bvive en\b|\bplaza\b)/.test(transNorm);
     const mentionsSession = /(\bsesi[oó]n\b|\bsesiones\b)/.test(transNorm);
+    const explicitCreateSession = /((crear|crea|creame|créame|anadir|añadir|abre|abrir|genera|genera)\s+(una\s+)?(nueva\s+)?sesi[oó]n|(nueva\s+sesi[oó]n))/i.test(transcription);
     const centerIds = new Set((centers || []).map((c: any) => c.id));
 
     field_changes = (field_changes || []).filter((c: any) => {
@@ -330,6 +331,18 @@ ${currentValues}`,
       // Si hay contenido, lo redirigimos a notes_append
       if (!notes_append && session_action.content) notes_append = session_action.content;
       session_action = null;
+    }
+
+    // Fallback determinista: si el usuario pidió explícitamente crear una sesión,
+    // jamás debe terminar en notes por una omisión del LLM.
+    if (!session_action && explicitCreateSession) {
+      session_action = {
+        type: "create_session",
+        professional_id: null,
+        session_date: null,
+        content: notes_append || "",
+      };
+      notes_append = null;
     }
 
     const results: any = {
@@ -400,17 +413,19 @@ ${currentValues}`,
           .single();
         if (cErr) throw new Error(`Error creando sesión: ${cErr.message}`);
 
-        await admin.from("patient_session_entries").insert({
-          session_id: session.id,
-          source: "voice",
-          content: session_action.content,
-          transcription,
-          audio_file_path: audio_file_path || null,
-          created_by: staffId,
-        });
+        if (session_action.content?.trim()) {
+          await admin.from("patient_session_entries").insert({
+            session_id: session.id,
+            source: "voice",
+            content: session_action.content.trim(),
+            transcription,
+            audio_file_path: audio_file_path || null,
+            created_by: staffId,
+          });
 
-        const summary = await regenerateSessionSummary(admin, session.id);
-        await admin.from("patient_sessions").update({ summary, updated_by: staffId }).eq("id", session.id);
+          const summary = await regenerateSessionSummary(admin, session.id);
+          await admin.from("patient_sessions").update({ summary, updated_by: staffId }).eq("id", session.id);
+        }
         await regenerateGlobalSynopsis(admin, idCol, entity_id, staffId);
         results.session_action_result = { type: "created", session_id: session.id, session_number: session.session_number };
       } else if (session_action.type === "append_to_session" && session_action.session_id) {
