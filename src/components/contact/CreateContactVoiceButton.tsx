@@ -41,6 +41,35 @@ export function CreateContactVoiceButton() {
     transcriptRef.current = "";
   };
 
+  const processTranscript = useCallback(async () => {
+    setStatus("processing");
+    const finalTranscript = transcriptRef.current.trim();
+    setTranscript(finalTranscript);
+
+    if (!finalTranscript) {
+      setStatus("error");
+      toast.error("No se pudo transcribir el audio. Habla más claro.");
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke("create-contact-voice", {
+        body: { transcription: finalTranscript },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setCreated(data.contact);
+      setInterpretation(data.interpretation || null);
+      setStatus("done");
+      toast.success(`Contacto "${data.contact.first_name} ${data.contact.last_name || ""}" creado`);
+      qc.invalidateQueries({ queryKey: ["contacts"] });
+    } catch (err: any) {
+      setStatus("error");
+      toast.error(err.message || "Error al crear contacto");
+    }
+  }, [qc]);
+
   const startRecording = useCallback(async () => {
     reset();
     try {
@@ -48,60 +77,40 @@ export function CreateContactVoiceButton() {
       streamRef.current = stream;
 
       const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
-      recorder.onstop = async () => {
+      recorder.onstop = () => {
         stream.getTracks().forEach((t) => t.stop());
-        setStatus("processing");
-
-        const finalTranscript = transcriptRef.current.trim();
-        setTranscript(finalTranscript);
-
-        if (!finalTranscript) {
-          setStatus("error");
-          toast.error("No se pudo transcribir el audio. Habla más claro.");
-          return;
-        }
-
-        try {
-          const { data, error } = await supabase.functions.invoke("create-contact-voice", {
-            body: { transcription: finalTranscript },
-          });
-          if (error) throw error;
-          if (data?.error) throw new Error(data.error);
-
-          setCreated(data.contact);
-          setInterpretation(data.interpretation || null);
-          setStatus("done");
-          toast.success(`Contacto "${data.contact.first_name} ${data.contact.last_name || ""}" creado`);
-          qc.invalidateQueries({ queryKey: ["contacts"] });
-        } catch (err: any) {
-          setStatus("error");
-          toast.error(err.message || "Error al crear contacto");
-        }
+        // Processing is triggered by recognition.onend to ensure final transcript is captured
       };
 
-      // SpeechRecognition for transcription
       const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SR) {
-        const recognition = new SR();
-        recognition.lang = "es-ES";
-        recognition.interimResults = false;
-        recognition.continuous = true;
-        recognition.maxAlternatives = 1;
-        recognition.onresult = (event: any) => {
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            if (event.results[i].isFinal) {
-              transcriptRef.current += event.results[i][0].transcript + " ";
-              setTranscript(transcriptRef.current.trim());
-            }
-          }
-        };
-        recognition.onerror = () => {};
-        recognition.start();
-        recognitionRef.current = recognition;
-      } else {
+      if (!SR) {
         toast.error("Tu navegador no soporta dictado por voz. Usa Chrome o Edge.");
         return;
       }
+      const recognition = new SR();
+      recognition.lang = "es-ES";
+      recognition.interimResults = true;
+      recognition.continuous = true;
+      recognition.maxAlternatives = 1;
+      recognition.onresult = (event: any) => {
+        let interim = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const t = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            transcriptRef.current += t + " ";
+          } else {
+            interim += t;
+          }
+        }
+        setTranscript((transcriptRef.current + " " + interim).trim());
+      };
+      recognition.onerror = () => {};
+      recognition.onend = () => {
+        // Final results have all flushed by now
+        processTranscript();
+      };
+      recognition.start();
+      recognitionRef.current = recognition;
 
       recorder.start();
       mediaRecorderRef.current = recorder;
@@ -110,12 +119,13 @@ export function CreateContactVoiceButton() {
       setStatus("error");
       toast.error(err.message || "No se pudo acceder al micrófono");
     }
-  }, [qc]);
+  }, [processTranscript]);
 
   const stopRecording = useCallback(() => {
+    setStatus("processing");
+    try { mediaRecorderRef.current?.stop(); } catch {}
     try { recognitionRef.current?.stop(); } catch {}
-    recognitionRef.current = null;
-    mediaRecorderRef.current?.stop();
+    mediaRecorderRef.current = null;
   }, []);
 
   const handleClose = () => {
