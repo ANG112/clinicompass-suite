@@ -36,10 +36,13 @@ export function usePatientSessions(entityType: "patient" | "contact", entityId: 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patient_sessions" as any)
-        .select("*, professional:staff_profiles(id, first_name, last_name)")
+        .select("*, professional:staff_profiles!patient_sessions_professional_id_fkey(id, first_name, last_name)")
         .eq(col, entityId!)
         .order("session_number", { ascending: false });
-      if (error) throw error;
+      if (error) {
+        console.error("[usePatientSessions] error:", error);
+        throw error;
+      }
       return (data || []) as unknown as PatientSession[];
     },
   });
